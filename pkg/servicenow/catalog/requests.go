@@ -20,55 +20,55 @@ type OrderResult struct {
 
 // Request represents a ServiceNow catalog request (sc_request)
 type Request struct {
-	SysID             string    `json:"sys_id"`
-	Number            string    `json:"number"`
-	State             string    `json:"state"`
-	Stage             string    `json:"stage"`
-	RequestedBy       string    `json:"requested_by"`
-	RequestedFor      string    `json:"requested_for"`
-	OpenedBy          string    `json:"opened_by"`
-	OpenedAt          time.Time `json:"opened_at"`
-	Description       string    `json:"description"`
-	ShortDescription  string    `json:"short_description"`
-	Justification     string    `json:"justification"`
-	SpecialInstructions string  `json:"special_instructions"`
-	DeliveryAddress   string    `json:"delivery_address"`
-	RequestedDate     time.Time `json:"requested_date"`
-	DueDate           time.Time `json:"due_date"`
-	Price             string    `json:"price"`
-	Priority          string    `json:"priority"`
-	Urgency           string    `json:"urgency"`
-	Impact            string    `json:"impact"`
-	ApprovalState     string    `json:"approval"`
-	RequestItems      []RequestItem `json:"request_items,omitempty"`
+	SysID               string        `json:"sys_id"`
+	Number              string        `json:"number"`
+	State               string        `json:"state"`
+	Stage               string        `json:"stage"`
+	RequestedBy         string        `json:"requested_by"`
+	RequestedFor        string        `json:"requested_for"`
+	OpenedBy            string        `json:"opened_by"`
+	OpenedAt            time.Time     `json:"opened_at"`
+	Description         string        `json:"description"`
+	ShortDescription    string        `json:"short_description"`
+	Justification       string        `json:"justification"`
+	SpecialInstructions string        `json:"special_instructions"`
+	DeliveryAddress     string        `json:"delivery_address"`
+	RequestedDate       time.Time     `json:"requested_date"`
+	DueDate             time.Time     `json:"due_date"`
+	Price               string        `json:"price"`
+	Priority            string        `json:"priority"`
+	Urgency             string        `json:"urgency"`
+	Impact              string        `json:"impact"`
+	ApprovalState       string        `json:"approval"`
+	RequestItems        []RequestItem `json:"request_items,omitempty"`
 }
 
 // RequestItem represents a ServiceNow request item (sc_req_item)
 type RequestItem struct {
-	SysID                 string                 `json:"sys_id"`
-	Number                string                 `json:"number"`
-	State                 string                 `json:"state"`
-	Stage                 string                 `json:"stage"`
-	RequestSysID          string                 `json:"request"`
-	CatalogItemSysID      string                 `json:"cat_item"`
-	Quantity              int                    `json:"quantity"`
-	Price                 string                 `json:"price"`
-	RecurringPrice        string                 `json:"recurring_price"`
-	RequestedBy           string                 `json:"requested_by"`
-	RequestedFor          string                 `json:"requested_for"`
-	OpenedBy              string                 `json:"opened_by"`
-	OpenedAt              time.Time              `json:"opened_at"`
-	DueDate               time.Time              `json:"due_date"`
-	Variables             map[string]interface{} `json:"variables,omitempty"`
-	CatalogItem           *CatalogItem           `json:"catalog_item,omitempty"`
-	Tasks                 []CatalogTask          `json:"tasks,omitempty"`
-	ApprovalState         string                 `json:"approval"`
-	FulfillmentGroup      string                 `json:"assignment_group"`
-	AssignedTo            string                 `json:"assigned_to"`
-	BusinessService       string                 `json:"business_service"`
-	ConfigurationItem     string                 `json:"cmdb_ci"`
-	DeliveryAddress       string                 `json:"delivery_address"`
-	SpecialInstructions   string                 `json:"special_instructions"`
+	SysID               string                 `json:"sys_id"`
+	Number              string                 `json:"number"`
+	State               string                 `json:"state"`
+	Stage               string                 `json:"stage"`
+	RequestSysID        string                 `json:"request"`
+	CatalogItemSysID    string                 `json:"cat_item"`
+	Quantity            int                    `json:"quantity"`
+	Price               string                 `json:"price"`
+	RecurringPrice      string                 `json:"recurring_price"`
+	RequestedBy         string                 `json:"requested_by"`
+	RequestedFor        string                 `json:"requested_for"`
+	OpenedBy            string                 `json:"opened_by"`
+	OpenedAt            time.Time              `json:"opened_at"`
+	DueDate             time.Time              `json:"due_date"`
+	Variables           map[string]interface{} `json:"variables,omitempty"`
+	CatalogItem         *CatalogItem           `json:"catalog_item,omitempty"`
+	Tasks               []CatalogTask          `json:"tasks,omitempty"`
+	ApprovalState       string                 `json:"approval"`
+	FulfillmentGroup    string                 `json:"assignment_group"`
+	AssignedTo          string                 `json:"assigned_to"`
+	BusinessService     string                 `json:"business_service"`
+	ConfigurationItem   string                 `json:"cmdb_ci"`
+	DeliveryAddress     string                 `json:"delivery_address"`
+	SpecialInstructions string                 `json:"special_instructions"`
 }
 
 // CatalogTask represents a ServiceNow catalog task (sc_task)
@@ -113,9 +113,9 @@ func (rt *RequestTracker) GetRequestWithContext(ctx context.Context, identifier 
 	// Determine if identifier is sys_id or number
 	var query string
 	if len(identifier) == 32 && isHexString(identifier) {
-		query = fmt.Sprintf("sys_id=%s", identifier)
+		query = fmt.Sprintf("sys_id=%s", sanitizeQueryTerm(identifier))
 	} else {
-		query = fmt.Sprintf("number=%s", identifier)
+		query = fmt.Sprintf("number=%s", sanitizeQueryTerm(identifier))
 	}
 
 	params := map[string]string{
@@ -175,15 +175,15 @@ func (rt *RequestTracker) GetRequestItems(requestIdentifier string) ([]RequestIt
 func (rt *RequestTracker) GetRequestItemsWithContext(ctx context.Context, requestIdentifier string) ([]RequestItem, error) {
 	var query string
 	if len(requestIdentifier) == 32 && isHexString(requestIdentifier) {
-		query = fmt.Sprintf("request=%s", requestIdentifier)
+		query = fmt.Sprintf("request=%s", sanitizeQueryTerm(requestIdentifier))
 	} else {
-		query = fmt.Sprintf("request.number=%s", requestIdentifier)
+		query = fmt.Sprintf("request.number=%s", sanitizeQueryTerm(requestIdentifier))
 	}
 
 	params := map[string]string{
 		"sysparm_query": query,
-		"sysparm_orderby": "number",
 	}
+	applyEncodedOrder(params, "number")
 
 	var response core.Response
 	err := rt.client.client.RawRequestWithContext(ctx, "GET", "/table/sc_req_item", nil, params, &response)
@@ -219,9 +219,9 @@ func (rt *RequestTracker) GetRequestItem(identifier string) (*RequestItem, error
 func (rt *RequestTracker) GetRequestItemWithContext(ctx context.Context, identifier string) (*RequestItem, error) {
 	var query string
 	if len(identifier) == 32 && isHexString(identifier) {
-		query = fmt.Sprintf("sys_id=%s", identifier)
+		query = fmt.Sprintf("sys_id=%s", sanitizeQueryTerm(identifier))
 	} else {
-		query = fmt.Sprintf("number=%s", identifier)
+		query = fmt.Sprintf("number=%s", sanitizeQueryTerm(identifier))
 	}
 
 	params := map[string]string{
@@ -281,15 +281,15 @@ func (rt *RequestTracker) GetRequestItemTasks(requestItemIdentifier string) ([]C
 func (rt *RequestTracker) GetRequestItemTasksWithContext(ctx context.Context, requestItemIdentifier string) ([]CatalogTask, error) {
 	var query string
 	if len(requestItemIdentifier) == 32 && isHexString(requestItemIdentifier) {
-		query = fmt.Sprintf("request_item=%s", requestItemIdentifier)
+		query = fmt.Sprintf("request_item=%s", sanitizeQueryTerm(requestItemIdentifier))
 	} else {
-		query = fmt.Sprintf("request_item.number=%s", requestItemIdentifier)
+		query = fmt.Sprintf("request_item.number=%s", sanitizeQueryTerm(requestItemIdentifier))
 	}
 
 	params := map[string]string{
 		"sysparm_query": query,
-		"sysparm_orderby": "number",
 	}
+	applyEncodedOrder(params, "number")
 
 	var response core.Response
 	err := rt.client.client.RawRequestWithContext(ctx, "GET", "/table/sc_task", nil, params, &response)
@@ -325,8 +325,8 @@ func (rt *RequestTracker) GetMyRequests(limit int) ([]Request, error) {
 func (rt *RequestTracker) GetMyRequestsWithContext(ctx context.Context, limit int) ([]Request, error) {
 	params := map[string]string{
 		"sysparm_query": "requested_by=javascript:gs.getUserID()",
-		"sysparm_orderby": "sys_created_on DESC",
 	}
+	applyEncodedOrder(params, "sys_created_on DESC")
 
 	if limit > 0 {
 		params["sysparm_limit"] = fmt.Sprintf("%d", limit)
@@ -365,9 +365,9 @@ func (rt *RequestTracker) GetRequestsByState(state string) ([]Request, error) {
 // GetRequestsByStateWithContext returns requests by state with context support
 func (rt *RequestTracker) GetRequestsByStateWithContext(ctx context.Context, state string) ([]Request, error) {
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("state=%s", state),
-		"sysparm_orderby": "sys_created_on DESC",
+		"sysparm_query": fmt.Sprintf("state=%s", sanitizeQueryTerm(state)),
 	}
+	applyEncodedOrder(params, "sys_created_on DESC")
 
 	var response core.Response
 	err := rt.client.client.RawRequestWithContext(ctx, "GET", "/table/sc_request", nil, params, &response)
@@ -403,7 +403,7 @@ func (rt *RequestTracker) TrackRequestProgress(requestIdentifier string, callbac
 func (rt *RequestTracker) TrackRequestProgressWithContext(ctx context.Context, requestIdentifier string, callback func(*Request, []RequestItem)) error {
 	// This is a simple polling implementation
 	// In a real implementation, you might want to use ServiceNow's event system or websockets
-	
+
 	ticker := time.NewTicker(30 * time.Second) // Poll every 30 seconds
 	defer ticker.Stop()
 
@@ -461,27 +461,27 @@ func (rt *RequestTracker) parseRequest(data map[string]interface{}) Request {
 
 func (rt *RequestTracker) parseRequestItem(data map[string]interface{}) RequestItem {
 	return RequestItem{
-		SysID:                 getString(data["sys_id"]),
-		Number:                getString(data["number"]),
-		State:                 getString(data["state"]),
-		Stage:                 getString(data["stage"]),
-		RequestSysID:          getString(data["request"]),
-		CatalogItemSysID:      getString(data["cat_item"]),
-		Quantity:              getInt(data["quantity"]),
-		Price:                 getString(data["price"]),
-		RecurringPrice:        getString(data["recurring_price"]),
-		RequestedBy:           getString(data["requested_by"]),
-		RequestedFor:          getString(data["requested_for"]),
-		OpenedBy:              getString(data["opened_by"]),
-		OpenedAt:              parseTime(getString(data["opened_at"])),
-		DueDate:               parseTime(getString(data["due_date"])),
-		ApprovalState:         getString(data["approval"]),
-		FulfillmentGroup:      getString(data["assignment_group"]),
-		AssignedTo:            getString(data["assigned_to"]),
-		BusinessService:       getString(data["business_service"]),
-		ConfigurationItem:     getString(data["cmdb_ci"]),
-		DeliveryAddress:       getString(data["delivery_address"]),
-		SpecialInstructions:   getString(data["special_instructions"]),
+		SysID:               getString(data["sys_id"]),
+		Number:              getString(data["number"]),
+		State:               getString(data["state"]),
+		Stage:               getString(data["stage"]),
+		RequestSysID:        getString(data["request"]),
+		CatalogItemSysID:    getString(data["cat_item"]),
+		Quantity:            getInt(data["quantity"]),
+		Price:               getString(data["price"]),
+		RecurringPrice:      getString(data["recurring_price"]),
+		RequestedBy:         getString(data["requested_by"]),
+		RequestedFor:        getString(data["requested_for"]),
+		OpenedBy:            getString(data["opened_by"]),
+		OpenedAt:            parseTime(getString(data["opened_at"])),
+		DueDate:             parseTime(getString(data["due_date"])),
+		ApprovalState:       getString(data["approval"]),
+		FulfillmentGroup:    getString(data["assignment_group"]),
+		AssignedTo:          getString(data["assigned_to"]),
+		BusinessService:     getString(data["business_service"]),
+		ConfigurationItem:   getString(data["cmdb_ci"]),
+		DeliveryAddress:     getString(data["delivery_address"]),
+		SpecialInstructions: getString(data["special_instructions"]),
 	}
 }
 

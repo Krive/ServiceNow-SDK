@@ -10,7 +10,10 @@ import (
 
 // RelationshipClient handles CI relationship operations
 type RelationshipClient struct {
-	client *CMDBClient
+	client                     *CMDBClient
+	resolveCI                  func(context.Context, string) (*ConfigurationItem, error)
+	resolveParentRelationships func(context.Context, string) ([]*CIRelationship, error)
+	resolveChildRelationships  func(context.Context, string) ([]*CIRelationship, error)
 }
 
 // NewRelationshipClient creates a new relationship client
@@ -25,8 +28,9 @@ func (r *RelationshipClient) GetRelationships(ciSysID string) ([]*CIRelationship
 
 // GetRelationshipsWithContext retrieves all relationships for a CI with context support
 func (r *RelationshipClient) GetRelationshipsWithContext(ctx context.Context, ciSysID string) ([]*CIRelationship, error) {
+	sanitizedCISysID := sanitizeEncodedQueryValue(ciSysID)
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("parent=%s^ORchild=%s", ciSysID, ciSysID),
+		"sysparm_query": fmt.Sprintf("parent=%s^ORchild=%s", sanitizedCISysID, sanitizedCISysID),
 	}
 
 	var result core.Response
@@ -60,7 +64,7 @@ func (r *RelationshipClient) GetParentRelationships(ciSysID string) ([]*CIRelati
 // GetParentRelationshipsWithContext retrieves parent relationships with context support
 func (r *RelationshipClient) GetParentRelationshipsWithContext(ctx context.Context, ciSysID string) ([]*CIRelationship, error) {
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("child=%s", ciSysID),
+		"sysparm_query": fmt.Sprintf("child=%s", sanitizeEncodedQueryValue(ciSysID)),
 	}
 
 	var result core.Response
@@ -94,7 +98,7 @@ func (r *RelationshipClient) GetChildRelationships(ciSysID string) ([]*CIRelatio
 // GetChildRelationshipsWithContext retrieves child relationships with context support
 func (r *RelationshipClient) GetChildRelationshipsWithContext(ctx context.Context, ciSysID string) ([]*CIRelationship, error) {
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("parent=%s", ciSysID),
+		"sysparm_query": fmt.Sprintf("parent=%s", sanitizeEncodedQueryValue(ciSysID)),
 	}
 
 	var result core.Response
@@ -169,7 +173,7 @@ func (r *RelationshipClient) GetDependencyMap(ciSysID string, depth int) (*CIDep
 // GetDependencyMapWithContext builds a dependency map with context support
 func (r *RelationshipClient) GetDependencyMapWithContext(ctx context.Context, ciSysID string, depth int) (*CIDependencyMap, error) {
 	// Get the root CI
-	rootCI, err := r.client.GetCIWithContext(ctx, ciSysID)
+	rootCI, err := r.getCIWithContext(ctx, ciSysID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get root CI: %w", err)
 	}
@@ -182,16 +186,17 @@ func (r *RelationshipClient) GetDependencyMapWithContext(ctx context.Context, ci
 		Depth:         depth,
 	}
 
-	visited := make(map[string]bool)
+	dependencyVisited := make(map[string]bool)
+	dependentVisited := make(map[string]bool)
 
 	// Build dependency tree recursively
-	err = r.buildDependencyTree(ctx, ciSysID, depMap, visited, depth, true)
+	err = r.buildDependencyTree(ctx, ciSysID, depMap, dependencyVisited, depth, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build dependency tree: %w", err)
 	}
 
 	// Build dependent tree recursively
-	err = r.buildDependencyTree(ctx, ciSysID, depMap, visited, depth, false)
+	err = r.buildDependencyTree(ctx, ciSysID, depMap, dependentVisited, depth, false)
 	if err != nil {
 		return nil, fmt.Errorf("failed to build dependent tree: %w", err)
 	}
@@ -212,10 +217,10 @@ func (r *RelationshipClient) buildDependencyTree(ctx context.Context, ciSysID st
 
 	if getDependencies {
 		// Get what this CI depends on (parent relationships)
-		relationships, err = r.GetParentRelationshipsWithContext(ctx, ciSysID)
+		relationships, err = r.getParentRelationshipsWithContext(ctx, ciSysID)
 	} else {
 		// Get what depends on this CI (child relationships)
-		relationships, err = r.GetChildRelationshipsWithContext(ctx, ciSysID)
+		relationships, err = r.getChildRelationshipsWithContext(ctx, ciSysID)
 	}
 
 	if err != nil {
@@ -233,7 +238,7 @@ func (r *RelationshipClient) buildDependencyTree(ctx context.Context, ciSysID st
 		}
 
 		// Get the related CI
-		relatedCI, err := r.client.GetCIWithContext(ctx, relatedCISysID)
+		relatedCI, err := r.getCIWithContext(ctx, relatedCISysID)
 		if err != nil {
 			continue // Skip if we can't get the CI
 		}
@@ -263,7 +268,7 @@ func (r *RelationshipClient) GetRelationshipsByType(relType string) ([]*CIRelati
 // GetRelationshipsByTypeWithContext retrieves relationships by type with context support
 func (r *RelationshipClient) GetRelationshipsByTypeWithContext(ctx context.Context, relType string) ([]*CIRelationship, error) {
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("type=%s", relType),
+		"sysparm_query": fmt.Sprintf("type=%s", sanitizeEncodedQueryValue(relType)),
 	}
 
 	var result core.Response
@@ -530,4 +535,25 @@ func (r *RelationshipClient) mapDataToRelationship(data map[string]interface{}) 
 	}
 
 	return rel
+}
+
+func (r *RelationshipClient) getCIWithContext(ctx context.Context, sysID string) (*ConfigurationItem, error) {
+	if r.resolveCI != nil {
+		return r.resolveCI(ctx, sysID)
+	}
+	return r.client.GetCIWithContext(ctx, sysID)
+}
+
+func (r *RelationshipClient) getParentRelationshipsWithContext(ctx context.Context, ciSysID string) ([]*CIRelationship, error) {
+	if r.resolveParentRelationships != nil {
+		return r.resolveParentRelationships(ctx, ciSysID)
+	}
+	return r.GetParentRelationshipsWithContext(ctx, ciSysID)
+}
+
+func (r *RelationshipClient) getChildRelationshipsWithContext(ctx context.Context, ciSysID string) ([]*CIRelationship, error) {
+	if r.resolveChildRelationships != nil {
+		return r.resolveChildRelationships(ctx, ciSysID)
+	}
+	return r.GetChildRelationshipsWithContext(ctx, ciSysID)
 }

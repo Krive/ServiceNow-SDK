@@ -357,6 +357,30 @@ _api_request() {
   fi
 }
 
+_api_request_with_optional_version() {
+  local method="$1"
+  local path="$2"
+  local body="${3:-}"
+
+  _api_request "$method" "$path" "$body"
+
+  if [[ "$LAST_STATUS" == "404" || "$LAST_STATUS" == "405" ]]; then
+    if [[ "$path" == /api/sn_sc/servicecatalog* ]]; then
+      local versioned_path="${path/\/api\/sn_sc\/servicecatalog/\/api\/sn_sc\/v1\/servicecatalog}"
+      info "Retrying with versioned Service Catalog path: ${versioned_path}"
+      _api_request "$method" "$versioned_path" "$body"
+      return
+    fi
+
+    if [[ "$path" == /api/now/import* && "$path" != /api/now/v1/import* ]]; then
+      local versioned_path="${path/\/api\/now\/import/\/api\/now\/v1\/import}"
+      info "Retrying with versioned Import Set path: ${versioned_path}"
+      _api_request "$method" "$versioned_path" "$body"
+      return
+    fi
+  fi
+}
+
 _api_upload_file() {
   local path="$1"
   local table_name="$2"
@@ -662,21 +686,21 @@ test_catalog_cart_endpoints() {
   }
 
   local add_payload='{"sysparm_quantity":1}'
-  _api_request "POST" "/api/sn_sc/servicecatalog/items/${item_sys_id}/add_to_cart" "$add_payload"
+  _api_request_with_optional_version "POST" "/api/sn_sc/servicecatalog/items/${item_sys_id}/add_to_cart" "$add_payload"
   expect_status "200"
 
   local cart_item_id
   cart_item_id="$(json_get '.result.item_id')"
 
-  _api_request "GET" "/api/sn_sc/servicecatalog/cart"
+  _api_request_with_optional_version "GET" "/api/sn_sc/servicecatalog/cart"
   expect_status "200"
 
   if [[ -n "$cart_item_id" ]]; then
     local update_payload='{"sysparm_quantity":2}'
-    _api_request "PUT" "/api/sn_sc/servicecatalog/cart/${cart_item_id}" "$update_payload"
+    _api_request_with_optional_version "PUT" "/api/sn_sc/servicecatalog/cart/${cart_item_id}" "$update_payload"
     expect_status "200"
 
-    _api_request "DELETE" "/api/sn_sc/servicecatalog/cart/${cart_item_id}"
+    _api_request_with_optional_version "DELETE" "/api/sn_sc/servicecatalog/cart/${cart_item_id}"
     expect_status "200 204"
   else
     warn "Cart add response did not include result.item_id; skipped item update/delete"
@@ -720,8 +744,14 @@ test_attachment_flow() {
   track_attachment "$attachment_id"
 
   local q
-  q="table_name=$(uri_encode "$table_name")&table_sys_id=$(uri_encode "$table_sys_id")&sysparm_limit=5"
-  _api_request "GET" "/api/now/attachment?${q}"
+  q="$(uri_encode "table_name=${table_name}^table_sys_id=${table_sys_id}")"
+  _api_request "GET" "/api/now/attachment?sysparm_query=${q}&sysparm_limit=5"
+  if [[ "$LAST_STATUS" != "200" ]]; then
+    # Legacy fallback for older behavior.
+    local q_legacy
+    q_legacy="table_name=$(uri_encode "$table_name")&table_sys_id=$(uri_encode "$table_sys_id")&sysparm_limit=5"
+    _api_request "GET" "/api/now/attachment?${q_legacy}"
+  fi
   expect_status "200"
 
   local download_file
@@ -761,21 +791,29 @@ test_import_set_endpoints() {
   local payload
   payload="$(jq -nc --arg tag "$TEST_TAG" '{u_name:("sdk-import-"+$tag), u_source:"sdk-smoke"}')"
 
-  _api_request "POST" "/api/now/import/${import_table}" "$payload"
+  _api_request_with_optional_version "POST" "/api/now/import/${import_table}" "$payload"
   expect_status "200 201"
 
   local import_set_id
-  import_set_id="$(json_get '.result.import_set // .result.sys_import_set // empty')"
+  local import_row_id
+  import_set_id="$(json_get '.result.import_set // .result.sys_import_set // .result[0].import_set // .result[0].sys_import_set // empty')"
+  import_row_id="$(json_get '.result.sys_id // .result[0].sys_id // empty')"
   if [[ -n "$import_set_id" ]]; then
-    _api_request "GET" "/api/now/import/sys_import_set/${import_set_id}"
+    _api_request "GET" "/api/now/table/sys_import_set/${import_set_id}"
+    if [[ "$LAST_STATUS" != "200" && -n "$import_row_id" ]]; then
+      _api_request_with_optional_version "GET" "/api/now/import/${import_table}/${import_row_id}"
+    fi
     expect_status "200"
 
     local q
     q="$(uri_encode "import_set=${import_set_id}")"
     _api_request "GET" "/api/now/table/sys_transform_entry?sysparm_query=${q}&sysparm_limit=5"
     expect_status "200"
+  elif [[ -n "$import_row_id" ]]; then
+    _api_request_with_optional_version "GET" "/api/now/import/${import_table}/${import_row_id}"
+    expect_status "200"
   else
-    warn "Import response did not expose import_set sys_id; skipped import_set lookup/transform checks"
+    warn "Import response did not expose import_set or row sys_id; skipped import_set lookup/transform checks"
   fi
 }
 
@@ -924,12 +962,12 @@ test_catalog_servicecatalog_extended_endpoints() {
     return 0
   }
 
-  _api_request "POST" "/api/sn_sc/servicecatalog/items/${item_sys_id}/add_to_cart" '{"sysparm_quantity":1}'
+  _api_request_with_optional_version "POST" "/api/sn_sc/servicecatalog/items/${item_sys_id}/add_to_cart" '{"sysparm_quantity":1}'
   expect_status "200"
   CATALOG_LAST_CART_ITEM_ID="$(json_get '.result.item_id')"
   CATALOG_LAST_CART_ID="$(json_get '.result.cart_id // .result.sys_id')"
 
-  _api_request "GET" "/api/sn_sc/servicecatalog/cart"
+  _api_request_with_optional_version "GET" "/api/sn_sc/servicecatalog/cart"
   expect_status "200"
   if [[ -z "$CATALOG_LAST_CART_ID" ]]; then
     CATALOG_LAST_CART_ID="$(json_get '.result.cart_id // .result.sys_id')"
@@ -938,14 +976,14 @@ test_catalog_servicecatalog_extended_endpoints() {
     CATALOG_LAST_CART_ITEM_ID="$(json_get '.result.items[0].sys_id')"
   fi
 
-  _api_request "POST" "/api/sn_sc/servicecatalog/items/${item_sys_id}/order_now" '{"sysparm_quantity":1}'
+  _api_request_with_optional_version "POST" "/api/sn_sc/servicecatalog/items/${item_sys_id}/order_now" '{"sysparm_quantity":1}'
   expect_status "200"
 
-  _api_request "POST" "/api/sn_sc/servicecatalog/cart/submit_order"
+  _api_request_with_optional_version "POST" "/api/sn_sc/servicecatalog/cart/submit_order"
   expect_status "200"
 
   if [[ -n "$CATALOG_LAST_CART_ID" ]]; then
-    _api_request "DELETE" "/api/sn_sc/servicecatalog/cart/${CATALOG_LAST_CART_ID}/empty"
+    _api_request_with_optional_version "DELETE" "/api/sn_sc/servicecatalog/cart/${CATALOG_LAST_CART_ID}/empty"
     expect_status "200 204"
   else
     warn "Cart id not available; skipped /cart/{id}/empty endpoint check"

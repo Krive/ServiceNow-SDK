@@ -27,7 +27,7 @@ func (c *ClassClient) GetCIClass(className string) (*CIClass, error) {
 // GetCIClassWithContext retrieves a CI class definition with context support
 func (c *ClassClient) GetCIClassWithContext(ctx context.Context, className string) (*CIClass, error) {
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("name=%s", className),
+		"sysparm_query": fmt.Sprintf("name=%s", sanitizeEncodedQueryValue(className)),
 		"sysparm_limit": "1",
 	}
 
@@ -115,7 +115,7 @@ func (c *ClassClient) buildClassHierarchy(ctx context.Context, className string,
 
 	// Get child classes
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("super_class.name=%s", className),
+		"sysparm_query": fmt.Sprintf("super_class.name=%s", sanitizeEncodedQueryValue(className)),
 	}
 
 	var result core.Response
@@ -176,7 +176,7 @@ func (c *ClassClient) GetClassAttributes(className string) ([]string, error) {
 // GetClassAttributesWithContext retrieves class attributes with context support
 func (c *ClassClient) GetClassAttributesWithContext(ctx context.Context, className string) ([]string, error) {
 	params := map[string]string{
-		"sysparm_query":  fmt.Sprintf("name=%s", className),
+		"sysparm_query":  fmt.Sprintf("name=%s", sanitizeEncodedQueryValue(className)),
 		"sysparm_fields": "column_label,element",
 	}
 
@@ -348,18 +348,24 @@ func (i *IdentificationClient) identifyItem(ctx context.Context, item map[string
 
 	className := "cmdb_ci"
 	if options.ClassName != "" {
-		className = options.ClassName
+		className = sanitizeEncodedQueryValue(options.ClassName)
 	}
 
 	// Build query based on matching attributes
 	var queryParts []string
 	for _, attr := range options.MatchingAttributes {
 		if value, exists := item[attr]; exists && value != "" {
+			sanitizedAttr := sanitizeEncodedQueryValue(attr)
+			sanitizedValue := sanitizeEncodedQueryValue(fmt.Sprintf("%v", value))
+			if sanitizedAttr == "" || sanitizedValue == "" {
+				continue
+			}
+
 			switch options.Strategy {
 			case "exact_match":
-				queryParts = append(queryParts, fmt.Sprintf("%s=%s", attr, value))
+				queryParts = append(queryParts, fmt.Sprintf("%s=%s", sanitizedAttr, sanitizedValue))
 			case "fuzzy_match":
-				queryParts = append(queryParts, fmt.Sprintf("%sLIKE%s", attr, value))
+				queryParts = append(queryParts, fmt.Sprintf("%sLIKE%s", sanitizedAttr, sanitizedValue))
 			}
 		}
 	}

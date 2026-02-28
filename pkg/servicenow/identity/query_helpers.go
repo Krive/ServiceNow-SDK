@@ -24,8 +24,16 @@ func buildEncodedOrderClause(orderBy string) string {
 	if order == "" {
 		return ""
 	}
+	order = sanitizeEncodedQueryValue(order)
 	if desc {
 		return "ORDERBYDESC" + order
 	}
 	return "ORDERBY" + order
+}
+
+func sanitizeEncodedQueryValue(value string) string {
+	cleaned := strings.ReplaceAll(value, "^", " ")
+	cleaned = strings.ReplaceAll(cleaned, "\n", " ")
+	cleaned = strings.ReplaceAll(cleaned, "\r", " ")
+	return cleaned
 }

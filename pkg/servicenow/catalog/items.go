@@ -15,11 +15,12 @@ func (cc *CatalogClient) ListItems(catalogSysID string) ([]CatalogItem, error) {
 
 // ListItemsWithContext returns catalog items with context support
 func (cc *CatalogClient) ListItemsWithContext(ctx context.Context, catalogSysID string) ([]CatalogItem, error) {
+	sanitizedCatalogSysID := sanitizeQueryTerm(catalogSysID)
 	params := map[string]string{
-		"sysparm_query":   fmt.Sprintf("sc_catalog=%s^active=true", catalogSysID),
-		"sysparm_fields":  "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
-		"sysparm_orderby": "order,name",
+		"sysparm_query":  fmt.Sprintf("sc_catalog=%s^active=true", sanitizedCatalogSysID),
+		"sysparm_fields": "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
 	}
+	applyEncodedOrder(params, "order,name")
 
 	var response core.Response
 	err := cc.client.RawRequestWithContext(ctx, "GET", "/table/sc_cat_item", nil, params, &response)
@@ -37,11 +38,12 @@ func (cc *CatalogClient) ListItemsByCategory(categorySysID string) ([]CatalogIte
 
 // ListItemsByCategoryWithContext returns catalog items by category with context support
 func (cc *CatalogClient) ListItemsByCategoryWithContext(ctx context.Context, categorySysID string) ([]CatalogItem, error) {
+	sanitizedCategorySysID := sanitizeQueryTerm(categorySysID)
 	params := map[string]string{
-		"sysparm_query":   fmt.Sprintf("category=%s^active=true", categorySysID),
-		"sysparm_fields":  "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
-		"sysparm_orderby": "order,name",
+		"sysparm_query":  fmt.Sprintf("category=%s^active=true", sanitizedCategorySysID),
+		"sysparm_fields": "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
 	}
+	applyEncodedOrder(params, "order,name")
 
 	var response core.Response
 	err := cc.client.RawRequestWithContext(ctx, "GET", "/table/sc_cat_item", nil, params, &response)
@@ -60,10 +62,10 @@ func (cc *CatalogClient) ListAllItems() ([]CatalogItem, error) {
 // ListAllItemsWithContext returns all active catalog items with context support
 func (cc *CatalogClient) ListAllItemsWithContext(ctx context.Context) ([]CatalogItem, error) {
 	params := map[string]string{
-		"sysparm_query":   "active=true",
-		"sysparm_fields":  "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
-		"sysparm_orderby": "sc_catalog,order,name",
+		"sysparm_query":  "active=true",
+		"sysparm_fields": "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
 	}
+	applyEncodedOrder(params, "sc_catalog,order,name")
 
 	var response core.Response
 	err := cc.client.RawRequestWithContext(ctx, "GET", "/table/sc_cat_item", nil, params, &response)
@@ -126,11 +128,12 @@ func (cc *CatalogClient) GetItemVariables(itemSysID string) ([]CatalogVariable, 
 
 // GetItemVariablesWithContext returns variables for a catalog item with context support
 func (cc *CatalogClient) GetItemVariablesWithContext(ctx context.Context, itemSysID string) ([]CatalogVariable, error) {
+	sanitizedItemSysID := sanitizeQueryTerm(itemSysID)
 	params := map[string]string{
-		"sysparm_query":   fmt.Sprintf("cat_item=%s^active=true", itemSysID),
-		"sysparm_fields":  "sys_id,name,question,type,mandatory,active,default_value,help_text,order,read_only,visible,choice_table,choice_field,reference",
-		"sysparm_orderby": "order,name",
+		"sysparm_query":  fmt.Sprintf("cat_item=%s^active=true", sanitizedItemSysID),
+		"sysparm_fields": "sys_id,name,question,type,mandatory,active,default_value,help_text,order,read_only,visible,choice_table,choice_field,reference",
 	}
+	applyEncodedOrder(params, "order,name")
 
 	var response core.Response
 	err := cc.client.RawRequestWithContext(ctx, "GET", "/table/item_option_new", nil, params, &response)
@@ -183,11 +186,12 @@ func (cc *CatalogClient) GetItemVariablesWithContext(ctx context.Context, itemSy
 
 // getVariableChoicesWithContext returns choices for a variable
 func (cc *CatalogClient) getVariableChoicesWithContext(ctx context.Context, variableSysID string) ([]VariableChoice, error) {
+	sanitizedVariableSysID := sanitizeQueryTerm(variableSysID)
 	params := map[string]string{
-		"sysparm_query":   fmt.Sprintf("question=%s^inactive=false", variableSysID),
-		"sysparm_fields":  "value,text,dependent_value,order",
-		"sysparm_orderby": "order,text",
+		"sysparm_query":  fmt.Sprintf("question=%s^inactive=false", sanitizedVariableSysID),
+		"sysparm_fields": "value,text,dependent_value,order",
 	}
+	applyEncodedOrder(params, "order,text")
 
 	var response core.Response
 	err := cc.client.RawRequestWithContext(ctx, "GET", "/table/question_choice", nil, params, &response)
@@ -228,10 +232,10 @@ func (cc *CatalogClient) SearchItems(searchTerm string) ([]CatalogItem, error) {
 func (cc *CatalogClient) SearchItemsWithContext(ctx context.Context, searchTerm string) ([]CatalogItem, error) {
 	cleanSearchTerm := sanitizeQueryTerm(searchTerm)
 	params := map[string]string{
-		"sysparm_query":   fmt.Sprintf("active=true^nameCONTAINS%s^ORshort_descriptionCONTAINS%s^ORdescriptionCONTAINS%s", cleanSearchTerm, cleanSearchTerm, cleanSearchTerm),
-		"sysparm_fields":  "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
-		"sysparm_orderby": "name",
+		"sysparm_query":  fmt.Sprintf("active=true^nameCONTAINS%s^ORshort_descriptionCONTAINS%s^ORdescriptionCONTAINS%s", cleanSearchTerm, cleanSearchTerm, cleanSearchTerm),
+		"sysparm_fields": "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
 	}
+	applyEncodedOrder(params, "name")
 
 	var response core.Response
 	err := cc.client.RawRequestWithContext(ctx, "GET", "/table/sc_cat_item", nil, params, &response)
@@ -249,11 +253,12 @@ func (cc *CatalogClient) GetItemsByType(itemType string) ([]CatalogItem, error) 
 
 // GetItemsByTypeWithContext returns catalog items by type with context support
 func (cc *CatalogClient) GetItemsByTypeWithContext(ctx context.Context, itemType string) ([]CatalogItem, error) {
+	sanitizedItemType := sanitizeQueryTerm(itemType)
 	params := map[string]string{
-		"sysparm_query":   fmt.Sprintf("active=true^type=%s", itemType),
-		"sysparm_fields":  "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
-		"sysparm_orderby": "name",
+		"sysparm_query":  fmt.Sprintf("active=true^type=%s", sanitizedItemType),
+		"sysparm_fields": "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
 	}
+	applyEncodedOrder(params, "name")
 
 	var response core.Response
 	err := cc.client.RawRequestWithContext(ctx, "GET", "/table/sc_cat_item", nil, params, &response)
@@ -272,10 +277,10 @@ func (cc *CatalogClient) GetOrderGuides() ([]CatalogItem, error) {
 // GetOrderGuidesWithContext returns order guides with context support
 func (cc *CatalogClient) GetOrderGuidesWithContext(ctx context.Context) ([]CatalogItem, error) {
 	params := map[string]string{
-		"sysparm_query":   "active=true^order_guide=true",
-		"sysparm_fields":  "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
-		"sysparm_orderby": "name",
+		"sysparm_query":  "active=true^order_guide=true",
+		"sysparm_fields": "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
 	}
+	applyEncodedOrder(params, "name")
 
 	var response core.Response
 	err := cc.client.RawRequestWithContext(ctx, "GET", "/table/sc_cat_item", nil, params, &response)

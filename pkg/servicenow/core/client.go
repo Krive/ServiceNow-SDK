@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"net"
+	"net/url"
 	"strings"
 	"time"
 
@@ -25,39 +26,78 @@ type Client struct {
 	timeout     time.Duration
 }
 
+// ClientOptions controls client security/transport behavior.
+type ClientOptions struct {
+	// AllowInsecureHTTP permits plain HTTP instance URLs. Keep disabled in production.
+	AllowInsecureHTTP bool
+}
+
 func NewClientBasicAuth(instanceURL, username, password string) (*Client, error) {
-	return newClient(instanceURL, NewBasicAuth(username, password))
+	return NewClientBasicAuthWithOptions(instanceURL, username, password, ClientOptions{})
+}
+
+func NewClientBasicAuthWithOptions(instanceURL, username, password string, options ClientOptions) (*Client, error) {
+	return newClientWithOptions(instanceURL, NewBasicAuth(username, password), options)
 }
 
 func NewClientOAuth(instanceURL, clientID, clientSecret string) (*Client, error) {
-	return newClient(instanceURL, NewOAuthClientCredentials(instanceURL, clientID, clientSecret))
+	return NewClientOAuthWithOptions(instanceURL, clientID, clientSecret, ClientOptions{})
+}
+
+func NewClientOAuthWithOptions(instanceURL, clientID, clientSecret string, options ClientOptions) (*Client, error) {
+	return newClientWithOptions(instanceURL, NewOAuthClientCredentials(instanceURL, clientID, clientSecret), options)
 }
 
 func NewClientOAuthWithStorage(instanceURL, clientID, clientSecret string, storage TokenStorage) (*Client, error) {
+	return NewClientOAuthWithStorageAndOptions(instanceURL, clientID, clientSecret, storage, ClientOptions{})
+}
+
+func NewClientOAuthWithStorageAndOptions(instanceURL, clientID, clientSecret string, storage TokenStorage, options ClientOptions) (*Client, error) {
 	if storage == nil {
-		return NewClientOAuth(instanceURL, clientID, clientSecret)
+		return NewClientOAuthWithOptions(instanceURL, clientID, clientSecret, options)
 	}
-	return newClient(instanceURL, NewOAuthClientCredentialsWithStorage(instanceURL, clientID, clientSecret, storage))
+	return newClientWithOptions(instanceURL, NewOAuthClientCredentialsWithStorage(instanceURL, clientID, clientSecret, storage), options)
 }
 
 func NewClientOAuthRefresh(instanceURL, clientID, clientSecret, refreshToken string) (*Client, error) {
-	return newClient(instanceURL, NewOAuthAuthorizationCode(instanceURL, clientID, clientSecret, refreshToken))
+	return NewClientOAuthRefreshWithOptions(instanceURL, clientID, clientSecret, refreshToken, ClientOptions{})
+}
+
+func NewClientOAuthRefreshWithOptions(instanceURL, clientID, clientSecret, refreshToken string, options ClientOptions) (*Client, error) {
+	return newClientWithOptions(instanceURL, NewOAuthAuthorizationCode(instanceURL, clientID, clientSecret, refreshToken), options)
 }
 
 func NewClientOAuthRefreshWithStorage(instanceURL, clientID, clientSecret, refreshToken string, storage TokenStorage) (*Client, error) {
+	return NewClientOAuthRefreshWithStorageAndOptions(instanceURL, clientID, clientSecret, refreshToken, storage, ClientOptions{})
+}
+
+func NewClientOAuthRefreshWithStorageAndOptions(instanceURL, clientID, clientSecret, refreshToken string, storage TokenStorage, options ClientOptions) (*Client, error) {
 	if storage == nil {
-		return NewClientOAuthRefresh(instanceURL, clientID, clientSecret, refreshToken)
+		return NewClientOAuthRefreshWithOptions(instanceURL, clientID, clientSecret, refreshToken, options)
 	}
-	return newClient(instanceURL, NewOAuthAuthorizationCodeWithStorage(instanceURL, clientID, clientSecret, refreshToken, storage))
+	return newClientWithOptions(instanceURL, NewOAuthAuthorizationCodeWithStorage(instanceURL, clientID, clientSecret, refreshToken, storage), options)
 }
 
 func NewClientAPIKey(instanceURL, apiKey string) (*Client, error) {
-	return newClient(instanceURL, NewAPIKeyAuth(apiKey))
+	return NewClientAPIKeyWithOptions(instanceURL, apiKey, ClientOptions{})
+}
+
+func NewClientAPIKeyWithOptions(instanceURL, apiKey string, options ClientOptions) (*Client, error) {
+	return newClientWithOptions(instanceURL, NewAPIKeyAuth(apiKey), options)
 }
 
 func newClient(instanceURL string, auth AuthProvider) (*Client, error) {
+	return newClientWithOptions(instanceURL, auth, ClientOptions{})
+}
+
+func newClientWithOptions(instanceURL string, auth AuthProvider, options ClientOptions) (*Client, error) {
+	normalizedURL, err := validateAndNormalizeInstanceURL(instanceURL, options.AllowInsecureHTTP)
+	if err != nil {
+		return nil, err
+	}
+
 	c := resty.New()
-	c.SetBaseURL(instanceURL + "/api/now")
+	c.SetBaseURL(normalizedURL + "/api/now")
 	c.SetHeader("Accept", "application/json")
 	c.SetHeader("Content-Type", "application/json")
 	c.SetTimeout(30 * time.Second) // Default timeout
@@ -73,14 +113,38 @@ func newClient(instanceURL string, auth AuthProvider) (*Client, error) {
 	retryConfig := retry.ServiceNowRetryConfig()
 
 	return &Client{
-		InstanceURL: instanceURL,
-		BaseURL:     instanceURL + "/api/now",
+		InstanceURL: normalizedURL,
+		BaseURL:     normalizedURL + "/api/now",
 		Client:      c,
 		Auth:        auth,
 		rateLimiter: rateLimiter,
 		retryConfig: retryConfig,
 		timeout:     30 * time.Second,
 	}, nil
+}
+
+func validateAndNormalizeInstanceURL(instanceURL string, allowInsecureHTTP bool) (string, error) {
+	parsed, err := url.Parse(strings.TrimSpace(instanceURL))
+	if err != nil {
+		return "", fmt.Errorf("invalid instance URL: %w", err)
+	}
+	if parsed.Scheme == "" || parsed.Host == "" {
+		return "", fmt.Errorf("instance URL must include scheme and host, got %q", instanceURL)
+	}
+
+	scheme := strings.ToLower(parsed.Scheme)
+	switch scheme {
+	case "https":
+		// secure default
+	case "http":
+		if !allowInsecureHTTP {
+			return "", fmt.Errorf("insecure instance URL %q is not allowed; use https or explicitly enable insecure HTTP", instanceURL)
+		}
+	default:
+		return "", fmt.Errorf("unsupported instance URL scheme %q", parsed.Scheme)
+	}
+
+	return fmt.Sprintf("%s://%s", scheme, parsed.Host), nil
 }
 
 const (

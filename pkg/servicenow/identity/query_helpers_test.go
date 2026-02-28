@@ -24,3 +24,11 @@ func TestBuildEncodedOrderClause(t *testing.T) {
 		})
 	}
 }
+
+func TestSanitizeEncodedQueryValue(t *testing.T) {
+	got := sanitizeEncodedQueryValue("a^ORb\nc\rd")
+	want := "a ORb c d"
+	if got != want {
+		t.Fatalf("unexpected sanitized value: got %q want %q", got, want)
+	}
+}

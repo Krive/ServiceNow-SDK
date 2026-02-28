@@ -262,7 +262,7 @@ func (i *IdentityClient) GetUserByUsername(username string) (*User, error) {
 // GetUserByUsernameWithContext retrieves a user by username with context support
 func (i *IdentityClient) GetUserByUsernameWithContext(ctx context.Context, username string) (*User, error) {
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("user_name=%s", username),
+		"sysparm_query": fmt.Sprintf("user_name=%s", sanitizeEncodedQueryValue(username)),
 		"sysparm_limit": "1",
 	}
 
@@ -397,34 +397,34 @@ func (i *IdentityClient) buildUserFilterParams(filter *UserFilter) map[string]st
 		queryParts = append(queryParts, fmt.Sprintf("active=%t", *filter.Active))
 	}
 	if filter.Department != "" {
-		queryParts = append(queryParts, fmt.Sprintf("department=%s", filter.Department))
+		queryParts = append(queryParts, fmt.Sprintf("department=%s", sanitizeEncodedQueryValue(filter.Department)))
 	}
 	if filter.Title != "" {
-		queryParts = append(queryParts, fmt.Sprintf("titleLIKE%s", filter.Title))
+		queryParts = append(queryParts, fmt.Sprintf("titleLIKE%s", sanitizeEncodedQueryValue(filter.Title)))
 	}
 	if filter.Company != "" {
-		queryParts = append(queryParts, fmt.Sprintf("company=%s", filter.Company))
+		queryParts = append(queryParts, fmt.Sprintf("company=%s", sanitizeEncodedQueryValue(filter.Company)))
 	}
 	if filter.Manager != "" {
-		queryParts = append(queryParts, fmt.Sprintf("manager=%s", filter.Manager))
+		queryParts = append(queryParts, fmt.Sprintf("manager=%s", sanitizeEncodedQueryValue(filter.Manager)))
 	}
 	if filter.Location != "" {
-		queryParts = append(queryParts, fmt.Sprintf("location=%s", filter.Location))
+		queryParts = append(queryParts, fmt.Sprintf("location=%s", sanitizeEncodedQueryValue(filter.Location)))
 	}
 	if filter.Email != "" {
-		queryParts = append(queryParts, fmt.Sprintf("emailLIKE%s", filter.Email))
+		queryParts = append(queryParts, fmt.Sprintf("emailLIKE%s", sanitizeEncodedQueryValue(filter.Email)))
 	}
 	if filter.VIP != nil {
 		queryParts = append(queryParts, fmt.Sprintf("vip=%t", *filter.VIP))
 	}
 	if filter.Source != "" {
-		queryParts = append(queryParts, fmt.Sprintf("source=%s", filter.Source))
+		queryParts = append(queryParts, fmt.Sprintf("source=%s", sanitizeEncodedQueryValue(filter.Source)))
 	}
 	if filter.Role != "" {
-		queryParts = append(queryParts, fmt.Sprintf("sys_user_has_role.role.name=%s", filter.Role))
+		queryParts = append(queryParts, fmt.Sprintf("sys_user_has_role.role.name=%s", sanitizeEncodedQueryValue(filter.Role)))
 	}
 	if filter.Group != "" {
-		queryParts = append(queryParts, fmt.Sprintf("sys_user_grmember.group.name=%s", filter.Group))
+		queryParts = append(queryParts, fmt.Sprintf("sys_user_grmember.group.name=%s", sanitizeEncodedQueryValue(filter.Group)))
 	}
 
 	if len(queryParts) > 0 {

@@ -154,8 +154,7 @@ func (a *AttachmentClient) List(tableName, sysID string) ([]map[string]interface
 // ListWithContext retrieves attachments for a record with context support
 func (a *AttachmentClient) ListWithContext(ctx context.Context, tableName, sysID string) ([]map[string]interface{}, error) {
 	params := map[string]string{
-		"table_name":   tableName,
-		"table_sys_id": sysID,
+		"sysparm_query": buildAttachmentListQuery(tableName, sysID),
 	}
 	var result core.Response
 	err := a.client.RawRequestWithContext(ctx, "GET", "/attachment", nil, params, &result)
@@ -175,6 +174,21 @@ func (a *AttachmentClient) ListWithContext(ctx context.Context, tableName, sysID
 		attachments = append(attachments, attach)
 	}
 	return attachments, nil
+}
+
+func buildAttachmentListQuery(tableName, sysID string) string {
+	return fmt.Sprintf(
+		"table_name=%s^table_sys_id=%s",
+		sanitizeEncodedQueryValue(tableName),
+		sanitizeEncodedQueryValue(sysID),
+	)
+}
+
+func sanitizeEncodedQueryValue(value string) string {
+	cleaned := strings.ReplaceAll(value, "^", " ")
+	cleaned = strings.ReplaceAll(cleaned, "\n", " ")
+	cleaned = strings.ReplaceAll(cleaned, "\r", " ")
+	return cleaned
 }
 
 // Upload uploads a file as an attachment

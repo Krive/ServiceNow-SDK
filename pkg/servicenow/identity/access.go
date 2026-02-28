@@ -195,7 +195,7 @@ func (a *AccessClient) GetUserSessions(userSysID string) ([]*UserSession, error)
 // GetUserSessionsWithContext retrieves user sessions with context support
 func (a *AccessClient) GetUserSessionsWithContext(ctx context.Context, userSysID string) ([]*UserSession, error) {
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("user=%s", userSysID),
+		"sysparm_query": fmt.Sprintf("user=%s", sanitizeEncodedQueryValue(userSysID)),
 	}
 
 	var result core.Response
@@ -229,7 +229,7 @@ func (a *AccessClient) GetUserPreferences(userSysID string) ([]*UserPreference, 
 // GetUserPreferencesWithContext retrieves user preferences with context support
 func (a *AccessClient) GetUserPreferencesWithContext(ctx context.Context, userSysID string) ([]*UserPreference, error) {
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("user=%s", userSysID),
+		"sysparm_query": fmt.Sprintf("user=%s", sanitizeEncodedQueryValue(userSysID)),
 	}
 
 	var result core.Response
@@ -321,7 +321,11 @@ func (a *AccessClient) DeleteUserPreference(userSysID, name string) error {
 func (a *AccessClient) DeleteUserPreferenceWithContext(ctx context.Context, userSysID, name string) error {
 	// Find the preference
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("user=%s^name=%s", userSysID, name),
+		"sysparm_query": fmt.Sprintf(
+			"user=%s^name=%s",
+			sanitizeEncodedQueryValue(userSysID),
+			sanitizeEncodedQueryValue(name),
+		),
 		"sysparm_limit": "1",
 	}
 

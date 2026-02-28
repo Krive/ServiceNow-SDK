@@ -48,7 +48,7 @@ func (r *RoleClient) GetRoleByName(roleName string) (*Role, error) {
 // GetRoleByNameWithContext retrieves a role by name with context support
 func (r *RoleClient) GetRoleByNameWithContext(ctx context.Context, roleName string) (*Role, error) {
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("name=%s", roleName),
+		"sysparm_query": fmt.Sprintf("name=%s", sanitizeEncodedQueryValue(roleName)),
 		"sysparm_limit": "1",
 	}
 
@@ -204,7 +204,11 @@ func (r *RoleClient) RemoveRoleFromUser(userSysID, roleSysID string) error {
 func (r *RoleClient) RemoveRoleFromUserWithContext(ctx context.Context, userSysID, roleSysID string) error {
 	// Find the assignment record
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("user=%s^role=%s", userSysID, roleSysID),
+		"sysparm_query": fmt.Sprintf(
+			"user=%s^role=%s",
+			sanitizeEncodedQueryValue(userSysID),
+			sanitizeEncodedQueryValue(roleSysID),
+		),
 		"sysparm_limit": "1",
 	}
 
@@ -250,7 +254,7 @@ func (r *RoleClient) GetUserRoles(userSysID string) ([]*UserRole, error) {
 // GetUserRolesWithContext retrieves all roles assigned to a user with context support
 func (r *RoleClient) GetUserRolesWithContext(ctx context.Context, userSysID string) ([]*UserRole, error) {
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("user=%s", userSysID),
+		"sysparm_query": fmt.Sprintf("user=%s", sanitizeEncodedQueryValue(userSysID)),
 	}
 
 	var result core.Response
@@ -284,7 +288,7 @@ func (r *RoleClient) GetRoleUsers(roleSysID string) ([]*UserRole, error) {
 // GetRoleUsersWithContext retrieves all users assigned to a role with context support
 func (r *RoleClient) GetRoleUsersWithContext(ctx context.Context, roleSysID string) ([]*UserRole, error) {
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("role=%s", roleSysID),
+		"sysparm_query": fmt.Sprintf("role=%s", sanitizeEncodedQueryValue(roleSysID)),
 	}
 
 	var result core.Response
@@ -337,7 +341,7 @@ func (r *RoleClient) buildRoleHierarchy(ctx context.Context, roleSysID string, h
 
 	// Get roles that include this role
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("contains_roles=%s", roleSysID),
+		"sysparm_query": fmt.Sprintf("contains_roles=%s", sanitizeEncodedQueryValue(roleSysID)),
 	}
 
 	var result core.Response
@@ -397,10 +401,10 @@ func (r *RoleClient) buildRoleFilterParams(filter *RoleFilter) map[string]string
 		queryParts = append(queryParts, fmt.Sprintf("elevated_privilege=%t", *filter.ElevatedPrivilege))
 	}
 	if filter.Application != "" {
-		queryParts = append(queryParts, fmt.Sprintf("application=%s", filter.Application))
+		queryParts = append(queryParts, fmt.Sprintf("application=%s", sanitizeEncodedQueryValue(filter.Application)))
 	}
 	if filter.Name != "" {
-		queryParts = append(queryParts, fmt.Sprintf("nameLIKE%s", filter.Name))
+		queryParts = append(queryParts, fmt.Sprintf("nameLIKE%s", sanitizeEncodedQueryValue(filter.Name)))
 	}
 
 	if len(queryParts) > 0 {

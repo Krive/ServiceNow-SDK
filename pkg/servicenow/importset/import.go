@@ -2,7 +2,10 @@ package importset
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
+	"net/url"
+	"strings"
 
 	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/core"
 )
@@ -22,9 +25,9 @@ type ImportRecord map[string]interface{}
 
 // ImportResponse represents the response from an import operation
 type ImportResponse struct {
-	ImportSet string                   `json:"import_set"`
-	StagingTable string               `json:"staging_table"`
-	Records   []map[string]interface{} `json:"records"`
+	ImportSet    string                   `json:"import_set"`
+	StagingTable string                   `json:"staging_table"`
+	Records      []map[string]interface{} `json:"records"`
 }
 
 // Insert inserts records into the specified import set table
@@ -40,32 +43,34 @@ func (i *ImportSetClient) InsertWithContext(ctx context.Context, tableName strin
 
 	// For single record, use direct insert
 	if len(records) == 1 {
+		normalizedRecord := normalizeImportRecord(records[0])
 		var result core.Response
-		err := i.client.RawRequestWithContext(ctx, "POST", fmt.Sprintf("/import/%s", tableName), records[0], nil, &result)
+		err := i.client.RawRequestWithContext(ctx, "POST", fmt.Sprintf("/import/%s", tableName), normalizedRecord, nil, &result)
 		if err != nil {
 			return nil, fmt.Errorf("failed to insert record: %w", err)
 		}
-		
+
 		response := &ImportResponse{
 			StagingTable: tableName,
 		}
-		
+
 		if resultMap, ok := result.Result.(map[string]interface{}); ok {
 			response.Records = []map[string]interface{}{resultMap}
 		}
-		
+
 		return response, nil
 	}
 
 	// For multiple records, insert each one
 	var allRecords []map[string]interface{}
 	for _, record := range records {
+		normalizedRecord := normalizeImportRecord(record)
 		var result core.Response
-		err := i.client.RawRequestWithContext(ctx, "POST", fmt.Sprintf("/import/%s", tableName), record, nil, &result)
+		err := i.client.RawRequestWithContext(ctx, "POST", fmt.Sprintf("/import/%s", tableName), normalizedRecord, nil, &result)
 		if err != nil {
 			return nil, fmt.Errorf("failed to insert record: %w", err)
 		}
-		
+
 		if resultMap, ok := result.Result.(map[string]interface{}); ok {
 			allRecords = append(allRecords, resultMap)
 		}
@@ -84,8 +89,13 @@ func (i *ImportSetClient) GetImportSet(importSetSysID string) (map[string]interf
 
 // GetImportSetWithContext retrieves information about an import set with context support
 func (i *ImportSetClient) GetImportSetWithContext(ctx context.Context, importSetSysID string) (map[string]interface{}, error) {
+	importSetSysID = strings.TrimSpace(importSetSysID)
+	if importSetSysID == "" {
+		return nil, fmt.Errorf("import set sys_id cannot be empty")
+	}
+
 	var result core.Response
-	err := i.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/import/sys_import_set/%s", importSetSysID), nil, nil, &result)
+	err := i.client.RawRequestWithContext(ctx, "GET", buildImportSetLookupPath(importSetSysID), nil, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get import set: %w", err)
 	}
@@ -97,6 +107,30 @@ func (i *ImportSetClient) GetImportSetWithContext(ctx context.Context, importSet
 	return nil, fmt.Errorf("unexpected result type: %T", result.Result)
 }
 
+func normalizeImportRecord(record ImportRecord) map[string]string {
+	normalized := make(map[string]string, len(record))
+
+	for key, value := range record {
+		switch typed := value.(type) {
+		case nil:
+			normalized[key] = ""
+		case string:
+			normalized[key] = typed
+		case []byte:
+			normalized[key] = string(typed)
+		default:
+			// Preserve structure when possible for complex values.
+			if payload, err := json.Marshal(typed); err == nil {
+				normalized[key] = string(payload)
+			} else {
+				normalized[key] = fmt.Sprintf("%v", typed)
+			}
+		}
+	}
+
+	return normalized
+}
+
 // GetTransformResults retrieves the transform results for an import set
 func (i *ImportSetClient) GetTransformResults(importSetSysID string) ([]map[string]interface{}, error) {
 	return i.GetTransformResultsWithContext(context.Background(), importSetSysID)
@@ -104,8 +138,13 @@ func (i *ImportSetClient) GetTransformResults(importSetSysID string) ([]map[stri
 
 // GetTransformResultsWithContext retrieves the transform results for an import set with context support
 func (i *ImportSetClient) GetTransformResultsWithContext(ctx context.Context, importSetSysID string) ([]map[string]interface{}, error) {
+	importSetSysID = strings.TrimSpace(importSetSysID)
+	if importSetSysID == "" {
+		return nil, fmt.Errorf("import set sys_id cannot be empty")
+	}
+
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("import_set=%s", importSetSysID),
+		"sysparm_query": fmt.Sprintf("import_set=%s", sanitizeEncodedQueryValue(importSetSysID)),
 	}
 
 	var result core.Response
@@ -125,4 +164,15 @@ func (i *ImportSetClient) GetTransformResultsWithContext(ctx context.Context, im
 	}
 
 	return nil, fmt.Errorf("unexpected result type: %T", result.Result)
+}
+
+func buildImportSetLookupPath(importSetSysID string) string {
+	return fmt.Sprintf("/table/sys_import_set/%s", url.PathEscape(importSetSysID))
+}
+
+func sanitizeEncodedQueryValue(value string) string {
+	cleaned := strings.ReplaceAll(value, "^", " ")
+	cleaned = strings.ReplaceAll(cleaned, "\n", " ")
+	cleaned = strings.ReplaceAll(cleaned, "\r", " ")
+	return cleaned
 }

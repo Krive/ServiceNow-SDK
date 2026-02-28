@@ -104,10 +104,10 @@ func (cc *CatalogClient) ListCatalogs() ([]Catalog, error) {
 // ListCatalogsWithContext returns all available catalogs with context support
 func (cc *CatalogClient) ListCatalogsWithContext(ctx context.Context) ([]Catalog, error) {
 	params := map[string]string{
-		"sysparm_query":   "active=true",
-		"sysparm_fields":  "sys_id,title,description,active,background_color,icon",
-		"sysparm_orderby": "order,title",
+		"sysparm_query":  "active=true",
+		"sysparm_fields": "sys_id,title,description,active,background_color,icon",
 	}
+	applyEncodedOrder(params, "order,title")
 
 	var response core.Response
 	err := cc.client.RawRequestWithContext(ctx, "GET", "/table/sc_catalog", nil, params, &response)
@@ -178,11 +178,12 @@ func (cc *CatalogClient) ListCategories(catalogSysID string) ([]Category, error)
 
 // ListCategoriesWithContext returns categories for a catalog with context support
 func (cc *CatalogClient) ListCategoriesWithContext(ctx context.Context, catalogSysID string) ([]Category, error) {
+	sanitizedCatalogSysID := sanitizeQueryTerm(catalogSysID)
 	params := map[string]string{
-		"sysparm_query":   fmt.Sprintf("sc_catalog=%s^active=true", catalogSysID),
-		"sysparm_fields":  "sys_id,title,description,active,sc_catalog,parent,icon,order",
-		"sysparm_orderby": "order,title",
+		"sysparm_query":  fmt.Sprintf("sc_catalog=%s^active=true", sanitizedCatalogSysID),
+		"sysparm_fields": "sys_id,title,description,active,sc_catalog,parent,icon,order",
 	}
+	applyEncodedOrder(params, "order,title")
 
 	var response core.Response
 	err := cc.client.RawRequestWithContext(ctx, "GET", "/table/sc_cat_item_category", nil, params, &response)
@@ -226,10 +227,10 @@ func (cc *CatalogClient) ListAllCategories() ([]Category, error) {
 // ListAllCategoriesWithContext returns all active categories with context support
 func (cc *CatalogClient) ListAllCategoriesWithContext(ctx context.Context) ([]Category, error) {
 	params := map[string]string{
-		"sysparm_query":   "active=true",
-		"sysparm_fields":  "sys_id,title,description,active,sc_catalog,parent,icon,order",
-		"sysparm_orderby": "sc_catalog,order,title",
+		"sysparm_query":  "active=true",
+		"sysparm_fields": "sys_id,title,description,active,sc_catalog,parent,icon,order",
 	}
+	applyEncodedOrder(params, "sc_catalog,order,title")
 
 	var response core.Response
 	err := cc.client.RawRequestWithContext(ctx, "GET", "/table/sc_cat_item_category", nil, params, &response)
@@ -306,10 +307,10 @@ func (cc *CatalogClient) SearchCategories(searchTerm string) ([]Category, error)
 func (cc *CatalogClient) SearchCategoriesWithContext(ctx context.Context, searchTerm string) ([]Category, error) {
 	cleanSearchTerm := sanitizeQueryTerm(searchTerm)
 	params := map[string]string{
-		"sysparm_query":   fmt.Sprintf("active=true^titleCONTAINS%s^ORdescriptionCONTAINS%s", cleanSearchTerm, cleanSearchTerm),
-		"sysparm_fields":  "sys_id,title,description,active,sc_catalog,parent,icon,order",
-		"sysparm_orderby": "title",
+		"sysparm_query":  fmt.Sprintf("active=true^titleCONTAINS%s^ORdescriptionCONTAINS%s", cleanSearchTerm, cleanSearchTerm),
+		"sysparm_fields": "sys_id,title,description,active,sc_catalog,parent,icon,order",
 	}
+	applyEncodedOrder(params, "title")
 
 	var response core.Response
 	err := cc.client.RawRequestWithContext(ctx, "GET", "/table/sc_cat_item_category", nil, params, &response)

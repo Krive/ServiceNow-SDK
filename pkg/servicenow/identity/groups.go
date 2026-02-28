@@ -48,7 +48,7 @@ func (g *GroupClient) GetGroupByName(groupName string) (*Group, error) {
 // GetGroupByNameWithContext retrieves a group by name with context support
 func (g *GroupClient) GetGroupByNameWithContext(ctx context.Context, groupName string) (*Group, error) {
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("name=%s", groupName),
+		"sysparm_query": fmt.Sprintf("name=%s", sanitizeEncodedQueryValue(groupName)),
 		"sysparm_limit": "1",
 	}
 
@@ -204,7 +204,11 @@ func (g *GroupClient) RemoveUserFromGroup(userSysID, groupSysID string) error {
 func (g *GroupClient) RemoveUserFromGroupWithContext(ctx context.Context, userSysID, groupSysID string) error {
 	// Find the membership record
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("user=%s^group=%s", userSysID, groupSysID),
+		"sysparm_query": fmt.Sprintf(
+			"user=%s^group=%s",
+			sanitizeEncodedQueryValue(userSysID),
+			sanitizeEncodedQueryValue(groupSysID),
+		),
 		"sysparm_limit": "1",
 	}
 
@@ -250,7 +254,7 @@ func (g *GroupClient) GetGroupMembers(groupSysID string) ([]*GroupMember, error)
 // GetGroupMembersWithContext retrieves all members of a group with context support
 func (g *GroupClient) GetGroupMembersWithContext(ctx context.Context, groupSysID string) ([]*GroupMember, error) {
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("group=%s", groupSysID),
+		"sysparm_query": fmt.Sprintf("group=%s", sanitizeEncodedQueryValue(groupSysID)),
 	}
 
 	var result core.Response
@@ -284,7 +288,7 @@ func (g *GroupClient) GetUserGroups(userSysID string) ([]*GroupMember, error) {
 // GetUserGroupsWithContext retrieves all groups a user is a member of with context support
 func (g *GroupClient) GetUserGroupsWithContext(ctx context.Context, userSysID string) ([]*GroupMember, error) {
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("user=%s", userSysID),
+		"sysparm_query": fmt.Sprintf("user=%s", sanitizeEncodedQueryValue(userSysID)),
 	}
 
 	var result core.Response
@@ -337,7 +341,7 @@ func (g *GroupClient) buildGroupHierarchy(ctx context.Context, groupSysID string
 
 	// Get child groups
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("parent=%s", groupSysID),
+		"sysparm_query": fmt.Sprintf("parent=%s", sanitizeEncodedQueryValue(groupSysID)),
 	}
 
 	var result core.Response
@@ -424,19 +428,19 @@ func (g *GroupClient) buildGroupFilterParams(filter *GroupFilter) map[string]str
 		queryParts = append(queryParts, fmt.Sprintf("active=%t", *filter.Active))
 	}
 	if filter.Type != "" {
-		queryParts = append(queryParts, fmt.Sprintf("type=%s", filter.Type))
+		queryParts = append(queryParts, fmt.Sprintf("type=%s", sanitizeEncodedQueryValue(filter.Type)))
 	}
 	if filter.Parent != "" {
-		queryParts = append(queryParts, fmt.Sprintf("parent=%s", filter.Parent))
+		queryParts = append(queryParts, fmt.Sprintf("parent=%s", sanitizeEncodedQueryValue(filter.Parent)))
 	}
 	if filter.Manager != "" {
-		queryParts = append(queryParts, fmt.Sprintf("manager=%s", filter.Manager))
+		queryParts = append(queryParts, fmt.Sprintf("manager=%s", sanitizeEncodedQueryValue(filter.Manager)))
 	}
 	if filter.Name != "" {
-		queryParts = append(queryParts, fmt.Sprintf("nameLIKE%s", filter.Name))
+		queryParts = append(queryParts, fmt.Sprintf("nameLIKE%s", sanitizeEncodedQueryValue(filter.Name)))
 	}
 	if filter.CostCenter != "" {
-		queryParts = append(queryParts, fmt.Sprintf("cost_center=%s", filter.CostCenter))
+		queryParts = append(queryParts, fmt.Sprintf("cost_center=%s", sanitizeEncodedQueryValue(filter.CostCenter)))
 	}
 
 	if len(queryParts) > 0 {

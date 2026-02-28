@@ -29,6 +29,7 @@ Go SDK for interacting with ServiceNow APIs with a clean client interface, fluen
 - Go `1.24+`
 - A reachable ServiceNow instance URL, for example:
   - `https://your-instance.service-now.com`
+- HTTPS is enforced by default for `InstanceURL`.
 
 ## Installation
 
@@ -127,6 +128,40 @@ client, err := sn.NewClient(sn.Config{
 	ClientID:     "client-id",
 	ClientSecret: "client-secret",
 	TokenStorage: tokenStore,
+})
+```
+
+To encrypt tokens at rest, provide encrypted file storage:
+
+```go
+import (
+	sn "github.com/Krive/ServiceNow-SDK/pkg/servicenow"
+	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/core"
+)
+
+// 32-byte key from a secure secret manager.
+encryptionKey := []byte("0123456789abcdef0123456789abcdef")
+tokenStore, err := core.NewEncryptedFileTokenStorage("", encryptionKey)
+if err != nil {
+	// handle key/storage init error
+}
+
+client, err := sn.NewClient(sn.Config{
+	InstanceURL:  "https://your-instance.service-now.com",
+	ClientID:     "client-id",
+	ClientSecret: "client-secret",
+	TokenStorage: tokenStore,
+})
+```
+
+For local development against non-TLS mock endpoints only, you can explicitly allow HTTP:
+
+```go
+client, err := sn.NewClient(sn.Config{
+	InstanceURL:       "http://localhost:8080",
+	AllowInsecureHTTP: true,
+	Username:          "dev_user",
+	Password:          "dev_password",
 })
 ```
 

@@ -396,37 +396,49 @@ func (c *CMDBClient) buildFilterParams(filter *CIFilter) map[string]string {
 	var queryParts []string
 
 	if filter.State != "" {
-		queryParts = append(queryParts, fmt.Sprintf("install_status=%s", filter.State))
+		queryParts = append(queryParts, fmt.Sprintf("install_status=%s", sanitizeEncodedQueryValue(filter.State)))
 	}
 	if filter.OperationalStatus != "" {
-		queryParts = append(queryParts, fmt.Sprintf("operational_status=%s", filter.OperationalStatus))
+		queryParts = append(queryParts, fmt.Sprintf("operational_status=%s", sanitizeEncodedQueryValue(filter.OperationalStatus)))
 	}
 	if filter.Environment != "" {
-		queryParts = append(queryParts, fmt.Sprintf("environment=%s", filter.Environment))
+		queryParts = append(queryParts, fmt.Sprintf("environment=%s", sanitizeEncodedQueryValue(filter.Environment)))
 	}
 	if filter.Location != "" {
-		queryParts = append(queryParts, fmt.Sprintf("location=%s", filter.Location))
+		queryParts = append(queryParts, fmt.Sprintf("location=%s", sanitizeEncodedQueryValue(filter.Location)))
 	}
 	if filter.Owner != "" {
-		queryParts = append(queryParts, fmt.Sprintf("owned_by=%s", filter.Owner))
+		queryParts = append(queryParts, fmt.Sprintf("owned_by=%s", sanitizeEncodedQueryValue(filter.Owner)))
 	}
 	if filter.SupportGroup != "" {
-		queryParts = append(queryParts, fmt.Sprintf("support_group=%s", filter.SupportGroup))
+		queryParts = append(queryParts, fmt.Sprintf("support_group=%s", sanitizeEncodedQueryValue(filter.SupportGroup)))
 	}
 	if filter.SerialNumber != "" {
-		queryParts = append(queryParts, fmt.Sprintf("serial_number=%s", filter.SerialNumber))
+		queryParts = append(queryParts, fmt.Sprintf("serial_number=%s", sanitizeEncodedQueryValue(filter.SerialNumber)))
 	}
 	if filter.AssetTag != "" {
-		queryParts = append(queryParts, fmt.Sprintf("asset_tag=%s", filter.AssetTag))
+		queryParts = append(queryParts, fmt.Sprintf("asset_tag=%s", sanitizeEncodedQueryValue(filter.AssetTag)))
 	}
 	if filter.IPAddress != "" {
-		queryParts = append(queryParts, fmt.Sprintf("ip_address=%s", filter.IPAddress))
+		queryParts = append(queryParts, fmt.Sprintf("ip_address=%s", sanitizeEncodedQueryValue(filter.IPAddress)))
 	}
 	if filter.FQDN != "" {
-		queryParts = append(queryParts, fmt.Sprintf("fqdn=%s", filter.FQDN))
+		queryParts = append(queryParts, fmt.Sprintf("fqdn=%s", sanitizeEncodedQueryValue(filter.FQDN)))
 	}
 	if filter.Name != "" {
-		queryParts = append(queryParts, fmt.Sprintf("nameLIKE%s", filter.Name))
+		queryParts = append(queryParts, fmt.Sprintf("nameLIKE%s", sanitizeEncodedQueryValue(filter.Name)))
+	}
+	if !filter.CreatedAfter.IsZero() {
+		queryParts = append(queryParts, fmt.Sprintf("sys_created_on>=%s", formatEncodedQueryDateTime(filter.CreatedAfter)))
+	}
+	if !filter.CreatedBefore.IsZero() {
+		queryParts = append(queryParts, fmt.Sprintf("sys_created_on<=%s", formatEncodedQueryDateTime(filter.CreatedBefore)))
+	}
+	if !filter.UpdatedAfter.IsZero() {
+		queryParts = append(queryParts, fmt.Sprintf("sys_updated_on>=%s", formatEncodedQueryDateTime(filter.UpdatedAfter)))
+	}
+	if !filter.UpdatedBefore.IsZero() {
+		queryParts = append(queryParts, fmt.Sprintf("sys_updated_on<=%s", formatEncodedQueryDateTime(filter.UpdatedBefore)))
 	}
 
 	if len(queryParts) > 0 {
@@ -472,6 +484,8 @@ func buildEncodedOrderClause(orderBy string) string {
 	if order == "" {
 		return ""
 	}
+	order = sanitizeEncodedQueryValue(order)
+
 	if desc {
 		return "ORDERBYDESC" + order
 	}

@@ -25,6 +25,9 @@ type Client struct {
 // Config holds configuration options for the ServiceNow client
 type Config struct {
 	InstanceURL string
+	// AllowInsecureHTTP permits plain HTTP instance URLs for local/test environments.
+	// Keep false in production.
+	AllowInsecureHTTP bool
 	// Authentication options (only one should be set)
 	Username     string            // For basic auth
 	Password     string            // For basic auth
@@ -48,26 +51,31 @@ func NewClient(config Config) (*Client, error) {
 
 	var coreClient *core.Client
 	var err error
+	clientOptions := core.ClientOptions{
+		AllowInsecureHTTP: config.AllowInsecureHTTP,
+	}
 
 	// Determine auth method based on provided credentials
 	if config.Username != "" && config.Password != "" {
-		coreClient, err = core.NewClientBasicAuth(config.InstanceURL, config.Username, config.Password)
+		coreClient, err = core.NewClientBasicAuthWithOptions(config.InstanceURL, config.Username, config.Password, clientOptions)
 	} else if config.APIKey != "" {
-		coreClient, err = core.NewClientAPIKey(config.InstanceURL, config.APIKey)
+		coreClient, err = core.NewClientAPIKeyWithOptions(config.InstanceURL, config.APIKey, clientOptions)
 	} else if config.ClientID != "" && config.ClientSecret != "" && config.RefreshToken != "" {
-		coreClient, err = core.NewClientOAuthRefreshWithStorage(
+		coreClient, err = core.NewClientOAuthRefreshWithStorageAndOptions(
 			config.InstanceURL,
 			config.ClientID,
 			config.ClientSecret,
 			config.RefreshToken,
 			config.TokenStorage,
+			clientOptions,
 		)
 	} else if config.ClientID != "" && config.ClientSecret != "" {
-		coreClient, err = core.NewClientOAuthWithStorage(
+		coreClient, err = core.NewClientOAuthWithStorageAndOptions(
 			config.InstanceURL,
 			config.ClientID,
 			config.ClientSecret,
 			config.TokenStorage,
+			clientOptions,
 		)
 	} else {
 		return nil, fmt.Errorf("authentication credentials must be provided: basic auth (username/password), API key, or OAuth (client_id/client_secret)")
