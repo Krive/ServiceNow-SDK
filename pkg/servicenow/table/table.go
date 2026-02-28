@@ -132,7 +132,6 @@ func (t *TableClient) Query() *query.QueryBuilder {
 	return query.New()
 }
 
-
 // ListWithQuery executes a query using the query builder
 func (t *TableClient) ListWithQuery(qb *query.QueryBuilder) ([]map[string]interface{}, error) {
 	return t.ListWithQueryContext(context.Background(), qb)
@@ -158,7 +157,7 @@ func (t *TableClient) Equals(field string, value interface{}) *TableQuery {
 	return t.Where(field, query.OpEquals, value)
 }
 
-// Contains creates a query builder with a contains condition (convenience method)  
+// Contains creates a query builder with a contains condition (convenience method)
 func (t *TableClient) Contains(field string, value interface{}) *TableQuery {
 	return t.Where(field, query.OpContains, value)
 }
@@ -269,21 +268,30 @@ func (tq *TableQuery) Count() (int, error) {
 
 // CountWithContext returns the number of records matching the query with context support
 func (tq *TableQuery) CountWithContext(ctx context.Context) (int, error) {
-	// Clone the builder and set up for count
-	countBuilder := tq.builder.Clone().Fields("sys_id").Limit(0)
-	params := countBuilder.Build()
-	params["sysparm_action"] = "getRecordCount"
-	
+	params := map[string]string{
+		"sysparm_count": "true",
+	}
+	if query := tq.builder.Clone().BuildQuery(); query != "" {
+		params["sysparm_query"] = query
+	}
+
 	var result core.Response
-	err := tq.table.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/%s", tq.table.name), nil, params, &result)
+	err := tq.table.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/stats/%s", tq.table.name), nil, params, &result)
 	if err != nil {
 		return 0, err
 	}
-	
-	if count, ok := result.Result.(string); ok {
-		return parseInt(count), nil
+
+	if resultData, ok := result.Result.(map[string]interface{}); ok {
+		if stats, ok := resultData["stats"].(map[string]interface{}); ok {
+			if count, ok := stats["count"]; ok {
+				return parseCountValue(count), nil
+			}
+		}
+		if count, ok := resultData["count"]; ok {
+			return parseCountValue(count), nil
+		}
 	}
-	
+
 	return 0, fmt.Errorf("unexpected result type for count: %T", result.Result)
 }
 
@@ -373,6 +381,12 @@ func getBool(v interface{}) bool {
 	if b, ok := v.(bool); ok {
 		return b
 	}
+	if s, ok := v.(string); ok {
+		switch strings.ToLower(strings.TrimSpace(s)) {
+		case "true", "1", "yes":
+			return true
+		}
+	}
 	return false
 }
 
@@ -416,46 +430,90 @@ func (t *TableClient) GetSchema() ([]core.ColumnMetadata, error) {
 
 // GetKeys retrieves sys_ids matching a query
 func (t *TableClient) GetKeys(query string) ([]string, error) {
-	params := map[string]string{"sysparm_action": "getKeys"}
+	params := map[string]string{
+		"sysparm_fields": "sys_id",
+	}
 	if query != "" {
 		params["sysparm_query"] = query
 	}
-	var result core.Response
-	err := t.client.RawRequest("GET", fmt.Sprintf("/table/%s", t.name), nil, params, &result)
-	if err != nil {
-		return nil, err
-	}
-	if result.Result == nil {
-		return []string{}, nil
-	}
-	switch res := result.Result.(type) {
-	case string:
-		if res == "" {
-			return []string{}, nil
+
+	const pageSize = 1000
+	var offset int
+	var sysIDs []string
+
+	for {
+		params["sysparm_limit"] = strconv.Itoa(pageSize)
+		params["sysparm_offset"] = strconv.Itoa(offset)
+
+		var result core.Response
+		err := t.client.RawRequest("GET", fmt.Sprintf("/table/%s", t.name), nil, params, &result)
+		if err != nil {
+			return nil, err
 		}
-		return strings.Split(res, ","), nil
-	case []interface{}:
-		var sysIDs []string
-		for _, idIf := range res {
-			switch id := idIf.(type) {
-			case string:
-				sysIDs = append(sysIDs, id)
-			case map[string]interface{}:
-				if val, ok := id["value"].(string); ok {
-					sysIDs = append(sysIDs, val)
-				} else if val, ok := id["sys_id"].(string); ok {
-					sysIDs = append(sysIDs, val)
-				} else if val, ok := id["display_value"].(string); ok {
-					sysIDs = append(sysIDs, val)
-				} else {
-					return nil, fmt.Errorf("unexpected sys_id map format: %+v", id)
-				}
-			default:
-				return nil, fmt.Errorf("unexpected sys_id type: %T", id)
+
+		records, ok := result.Result.([]interface{})
+		if !ok {
+			return nil, fmt.Errorf("unexpected result type for getKeys: %T", result.Result)
+		}
+		if len(records) == 0 {
+			break
+		}
+
+		for _, record := range records {
+			recordMap, ok := record.(map[string]interface{})
+			if !ok {
+				return nil, fmt.Errorf("unexpected record type for getKeys: %T", record)
+			}
+
+			sysID, err := extractSysID(recordMap["sys_id"])
+			if err != nil {
+				return nil, err
+			}
+			if sysID != "" {
+				sysIDs = append(sysIDs, sysID)
 			}
 		}
-		return sysIDs, nil
+
+		if len(records) < pageSize {
+			break
+		}
+		offset += pageSize
+	}
+
+	return sysIDs, nil
+}
+
+func extractSysID(value interface{}) (string, error) {
+	switch id := value.(type) {
+	case string:
+		return id, nil
+	case map[string]interface{}:
+		if val, ok := id["value"].(string); ok && val != "" {
+			return val, nil
+		}
+		if val, ok := id["sys_id"].(string); ok && val != "" {
+			return val, nil
+		}
+		if val, ok := id["display_value"].(string); ok {
+			return val, nil
+		}
+		return "", fmt.Errorf("unexpected sys_id map format: %+v", id)
 	default:
-		return nil, fmt.Errorf("unexpected result type for getKeys: %T", result.Result)
+		return "", fmt.Errorf("unexpected sys_id type: %T", id)
+	}
+}
+
+func parseCountValue(value interface{}) int {
+	switch v := value.(type) {
+	case string:
+		return parseInt(v)
+	case int:
+		return v
+	case int64:
+		return int(v)
+	case float64:
+		return int(v)
+	default:
+		return 0
 	}
 }

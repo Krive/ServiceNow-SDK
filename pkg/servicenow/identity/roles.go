@@ -27,7 +27,7 @@ func (r *RoleClient) GetRole(sysID string) (*Role, error) {
 // GetRoleWithContext retrieves a role by sys_id with context support
 func (r *RoleClient) GetRoleWithContext(ctx context.Context, sysID string) (*Role, error) {
 	var result core.Response
-	err := r.client.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/api/now/table/sys_user_role/%s", sysID), nil, nil, &result)
+	err := r.client.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/sys_user_role/%s", sysID), nil, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get role: %w", err)
 	}
@@ -53,7 +53,7 @@ func (r *RoleClient) GetRoleByNameWithContext(ctx context.Context, roleName stri
 	}
 
 	var result core.Response
-	err := r.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/sys_user_role", nil, params, &result)
+	err := r.client.client.RawRequestWithContext(ctx, "GET", "/table/sys_user_role", nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get role by name: %w", err)
 	}
@@ -85,7 +85,7 @@ func (r *RoleClient) ListRolesWithContext(ctx context.Context, filter *RoleFilte
 	params := r.buildRoleFilterParams(filter)
 
 	var result core.Response
-	err := r.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/sys_user_role", nil, params, &result)
+	err := r.client.client.RawRequestWithContext(ctx, "GET", "/table/sys_user_role", nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list roles: %w", err)
 	}
@@ -115,7 +115,7 @@ func (r *RoleClient) CreateRole(roleData map[string]interface{}) (*Role, error) 
 // CreateRoleWithContext creates a new role with context support
 func (r *RoleClient) CreateRoleWithContext(ctx context.Context, roleData map[string]interface{}) (*Role, error) {
 	var result core.Response
-	err := r.client.client.RawRequestWithContext(ctx, "POST", "/api/now/table/sys_user_role", roleData, nil, &result)
+	err := r.client.client.RawRequestWithContext(ctx, "POST", "/table/sys_user_role", roleData, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create role: %w", err)
 	}
@@ -136,7 +136,7 @@ func (r *RoleClient) UpdateRole(sysID string, updates map[string]interface{}) (*
 // UpdateRoleWithContext updates an existing role with context support
 func (r *RoleClient) UpdateRoleWithContext(ctx context.Context, sysID string, updates map[string]interface{}) (*Role, error) {
 	var result core.Response
-	err := r.client.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/api/now/table/sys_user_role/%s", sysID), updates, nil, &result)
+	err := r.client.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/table/sys_user_role/%s", sysID), updates, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update role: %w", err)
 	}
@@ -160,12 +160,12 @@ func (r *RoleClient) DeleteRoleWithContext(ctx context.Context, sysID string) er
 	updates := map[string]interface{}{
 		"active": "false",
 	}
-	
+
 	_, err := r.UpdateRoleWithContext(ctx, sysID, updates)
 	if err != nil {
 		return fmt.Errorf("failed to deactivate role: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -182,7 +182,7 @@ func (r *RoleClient) AssignRoleToUserWithContext(ctx context.Context, userSysID,
 	}
 
 	var result core.Response
-	err := r.client.client.RawRequestWithContext(ctx, "POST", "/api/now/table/sys_user_has_role", assignmentData, nil, &result)
+	err := r.client.client.RawRequestWithContext(ctx, "POST", "/table/sys_user_has_role", assignmentData, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to assign role to user: %w", err)
 	}
@@ -209,7 +209,7 @@ func (r *RoleClient) RemoveRoleFromUserWithContext(ctx context.Context, userSysI
 	}
 
 	var result core.Response
-	err := r.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/sys_user_has_role", nil, params, &result)
+	err := r.client.client.RawRequestWithContext(ctx, "GET", "/table/sys_user_has_role", nil, params, &result)
 	if err != nil {
 		return fmt.Errorf("failed to find role assignment: %w", err)
 	}
@@ -234,7 +234,7 @@ func (r *RoleClient) RemoveRoleFromUserWithContext(ctx context.Context, userSysI
 	}
 
 	// Delete the assignment
-	err = r.client.client.RawRequestWithContext(ctx, "DELETE", fmt.Sprintf("/api/now/table/sys_user_has_role/%s", assignmentSysID), nil, nil, nil)
+	err = r.client.client.RawRequestWithContext(ctx, "DELETE", fmt.Sprintf("/table/sys_user_has_role/%s", assignmentSysID), nil, nil, nil)
 	if err != nil {
 		return fmt.Errorf("failed to remove role assignment: %w", err)
 	}
@@ -254,7 +254,7 @@ func (r *RoleClient) GetUserRolesWithContext(ctx context.Context, userSysID stri
 	}
 
 	var result core.Response
-	err := r.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/sys_user_has_role", nil, params, &result)
+	err := r.client.client.RawRequestWithContext(ctx, "GET", "/table/sys_user_has_role", nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user roles: %w", err)
 	}
@@ -288,7 +288,7 @@ func (r *RoleClient) GetRoleUsersWithContext(ctx context.Context, roleSysID stri
 	}
 
 	var result core.Response
-	err := r.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/sys_user_has_role", nil, params, &result)
+	err := r.client.client.RawRequestWithContext(ctx, "GET", "/table/sys_user_has_role", nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get role users: %w", err)
 	}
@@ -341,7 +341,7 @@ func (r *RoleClient) buildRoleHierarchy(ctx context.Context, roleSysID string, h
 	}
 
 	var result core.Response
-	err := r.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/sys_user_role_contains", nil, params, &result)
+	err := r.client.client.RawRequestWithContext(ctx, "GET", "/table/sys_user_role_contains", nil, params, &result)
 	if err != nil {
 		return fmt.Errorf("failed to get role inclusions for %s: %w", roleSysID, err)
 	}
@@ -380,13 +380,13 @@ func (r *RoleClient) buildRoleHierarchy(ctx context.Context, roleSysID string, h
 // Helper method to build role filter parameters
 func (r *RoleClient) buildRoleFilterParams(filter *RoleFilter) map[string]string {
 	params := make(map[string]string)
-	
+
 	if filter == nil {
 		return params
 	}
 
 	var queryParts []string
-	
+
 	if filter.Active != nil {
 		queryParts = append(queryParts, fmt.Sprintf("active=%t", *filter.Active))
 	}
@@ -413,8 +413,9 @@ func (r *RoleClient) buildRoleFilterParams(filter *RoleFilter) map[string]string
 	if filter.Offset > 0 {
 		params["sysparm_offset"] = fmt.Sprintf("%d", filter.Offset)
 	}
-	if filter.OrderBy != "" {
-		params["sysparm_order"] = filter.OrderBy
+	if orderClause := buildEncodedOrderClause(filter.OrderBy); orderClause != "" {
+		queryParts = append(queryParts, orderClause)
+		params["sysparm_query"] = strings.Join(queryParts, "^")
 	}
 	if len(filter.Fields) > 0 {
 		params["sysparm_fields"] = strings.Join(filter.Fields, ",")

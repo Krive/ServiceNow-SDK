@@ -28,12 +28,12 @@ func NewAggregateClient(client *core.Client, tableName string) *AggregateClient 
 type AggregateType string
 
 const (
-	Count   AggregateType = "COUNT"
-	Sum     AggregateType = "SUM"
-	Avg     AggregateType = "AVG"
-	Min     AggregateType = "MIN"
-	Max     AggregateType = "MAX"
-	StdDev  AggregateType = "STDDEV"
+	Count    AggregateType = "COUNT"
+	Sum      AggregateType = "SUM"
+	Avg      AggregateType = "AVG"
+	Min      AggregateType = "MIN"
+	Max      AggregateType = "MAX"
+	StdDev   AggregateType = "STDDEV"
 	Variance AggregateType = "VARIANCE"
 )
 
@@ -64,7 +64,7 @@ type AggregateQuery struct {
 
 // AggregateResult represents the result of an aggregate query
 type AggregateResult struct {
-	Stats  map[string]interface{} `json:"stats"`
+	Stats  map[string]interface{}   `json:"stats"`
 	Result []map[string]interface{} `json:"result"`
 }
 
@@ -214,7 +214,7 @@ func (aq *AggregateQuery) Execute() (*AggregateResult, error) {
 // ExecuteWithContext runs the aggregate query with context support
 func (aq *AggregateQuery) ExecuteWithContext(ctx context.Context) (*AggregateResult, error) {
 	params := aq.BuildParams()
-	
+
 	var result core.Response
 	err := aq.client.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/stats/%s", aq.client.tableName), nil, params, &result)
 	if err != nil {
@@ -223,7 +223,7 @@ func (aq *AggregateQuery) ExecuteWithContext(ctx context.Context) (*AggregateRes
 
 	// Parse the response
 	aggregateResult := &AggregateResult{}
-	
+
 	// Handle stats response format - ServiceNow returns nested structure
 	if resultData, ok := result.Result.(map[string]interface{}); ok {
 		// Check for nested stats structure: result.stats
@@ -233,7 +233,7 @@ func (aq *AggregateQuery) ExecuteWithContext(ctx context.Context) (*AggregateRes
 			// Fallback: treat result directly as stats
 			aggregateResult.Stats = resultData
 		}
-		
+
 		// If there are group by fields, the result will be in a different format
 		if len(aq.groupBy) > 0 {
 			if resultArray, ok := resultData["result"].([]interface{}); ok {
@@ -269,25 +269,20 @@ func (aq *AggregateQuery) BuildParams() map[string]string {
 
 	// Add aggregate fields using correct ServiceNow parameters
 	if len(aq.aggregates) > 0 {
-		var countFields []string
+		hasCount := false
 		var sumFields []string
 		var avgFields []string
 		var minFields []string
 		var maxFields []string
 		var stddevFields []string
 		var varianceFields []string
-		
+
 		for _, agg := range aq.aggregates {
 			fieldName := agg.Field
-			
+
 			switch agg.Type {
 			case Count:
-				if agg.Field == "" {
-					// COUNT(*) case
-					params["sysparm_count"] = "true"
-				} else {
-					countFields = append(countFields, fieldName)
-				}
+				hasCount = true
 			case Sum:
 				sumFields = append(sumFields, fieldName)
 			case Avg:
@@ -302,10 +297,10 @@ func (aq *AggregateQuery) BuildParams() map[string]string {
 				varianceFields = append(varianceFields, fieldName)
 			}
 		}
-		
+
 		// Set the appropriate parameters
-		if len(countFields) > 0 {
-			params["sysparm_count_fields"] = strings.Join(countFields, ",")
+		if hasCount {
+			params["sysparm_count"] = "true"
 		}
 		if len(sumFields) > 0 {
 			params["sysparm_sum_fields"] = strings.Join(sumFields, ",")
@@ -331,11 +326,7 @@ func (aq *AggregateQuery) BuildParams() map[string]string {
 	if len(aq.groupBy) > 0 {
 		var groupParts []string
 		for _, group := range aq.groupBy {
-			groupStr := group.Field
-			if group.Alias != "" {
-				groupStr = fmt.Sprintf("%s AS %s", group.Field, group.Alias)
-			}
-			groupParts = append(groupParts, groupStr)
+			groupParts = append(groupParts, group.Field)
 		}
 		params["sysparm_group_by"] = strings.Join(groupParts, ",")
 	}
@@ -347,7 +338,30 @@ func (aq *AggregateQuery) BuildParams() map[string]string {
 
 	// Add ordering
 	if len(aq.orderBy) > 0 {
-		params["sysparm_orderby"] = strings.Join(aq.orderBy, ",")
+		var ascending []string
+		var descending []string
+		for _, order := range aq.orderBy {
+			parts := strings.Fields(order)
+			if len(parts) == 0 {
+				continue
+			}
+			field := parts[0]
+			direction := ""
+			if len(parts) > 1 {
+				direction = strings.ToUpper(parts[len(parts)-1])
+			}
+			if direction == string(query.OrderDesc) {
+				descending = append(descending, field)
+			} else {
+				ascending = append(ascending, field)
+			}
+		}
+		if len(ascending) > 0 {
+			params["sysparm_order_by"] = strings.Join(ascending, ",")
+		}
+		if len(descending) > 0 {
+			params["sysparm_order_by_desc"] = strings.Join(descending, ",")
+		}
 	}
 
 	// Add limit
@@ -404,12 +418,12 @@ func (ac *AggregateClient) CountRecordsWithRawQueryContext(ctx context.Context, 
 	params := map[string]string{
 		"sysparm_count": "true",
 	}
-	
+
 	// Add the raw query if provided
 	if rawQuery != "" {
 		params["sysparm_query"] = rawQuery
 	}
-	
+
 	var result core.Response
 	err := ac.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/stats/%s", ac.tableName), nil, params, &result)
 	if err != nil {

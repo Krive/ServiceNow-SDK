@@ -4,6 +4,8 @@ import (
 	"context"
 	"fmt"
 	"strconv"
+
+	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/core"
 )
 
 // CartItem represents an item in the shopping cart
@@ -19,6 +21,7 @@ type CartItem struct {
 
 // Cart represents the shopping cart
 type Cart struct {
+	CartID     string     `json:"cart_id,omitempty"`
 	Items      []CartItem `json:"items"`
 	TotalPrice string     `json:"total_price"`
 	Subtotal   string     `json:"subtotal"`
@@ -65,7 +68,15 @@ func (cc *CatalogClient) AddToCartWithContext(ctx context.Context, itemSysID str
 
 	// Use ServiceNow's Service Catalog API to add to cart
 	var response map[string]interface{}
-	err := cc.client.RawRequestWithContext(ctx, "POST", fmt.Sprintf("/sn_sc/servicecatalog/items/%s/add_to_cart", itemSysID), request, nil, &response)
+	err := cc.client.RawRootRequestWithContext(
+		ctx,
+		"POST",
+		buildAddToCartPath(itemSysID),
+		request,
+		nil,
+		&response,
+		core.FormatJSON,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to add item to cart: %w", err)
 	}
@@ -98,7 +109,15 @@ func (cc *CatalogClient) GetCart() (*Cart, error) {
 // GetCartWithContext returns the current cart contents with context support
 func (cc *CatalogClient) GetCartWithContext(ctx context.Context) (*Cart, error) {
 	var response map[string]interface{}
-	err := cc.client.RawRequestWithContext(ctx, "GET", "/sn_sc/servicecatalog/cart", nil, nil, &response)
+	err := cc.client.RawRootRequestWithContext(
+		ctx,
+		"GET",
+		buildCartPath(),
+		nil,
+		nil,
+		&response,
+		core.FormatJSON,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get cart: %w", err)
 	}
@@ -109,6 +128,7 @@ func (cc *CatalogClient) GetCartWithContext(ctx context.Context) (*Cart, error) 
 	}
 
 	if result, ok := response["result"].(map[string]interface{}); ok {
+		cart.CartID = extractCartID(result)
 		cart.TotalPrice = getString(result["total_price"])
 		cart.Subtotal = getString(result["subtotal"])
 		cart.Tax = getString(result["tax"])
@@ -155,7 +175,15 @@ func (cc *CatalogClient) UpdateCartItemWithContext(ctx context.Context, cartItem
 	}
 
 	var response map[string]interface{}
-	err := cc.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/sn_sc/servicecatalog/cart/items/%s", cartItemSysID), request, nil, &response)
+	err := cc.client.RawRootRequestWithContext(
+		ctx,
+		"PUT",
+		buildCartItemPath(cartItemSysID),
+		request,
+		nil,
+		&response,
+		core.FormatJSON,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to update cart item: %w", err)
 	}
@@ -175,7 +203,15 @@ func (cc *CatalogClient) RemoveFromCart(cartItemSysID string) error {
 // RemoveFromCartWithContext removes an item from the cart with context support
 func (cc *CatalogClient) RemoveFromCartWithContext(ctx context.Context, cartItemSysID string) error {
 	var response map[string]interface{}
-	err := cc.client.RawRequestWithContext(ctx, "DELETE", fmt.Sprintf("/sn_sc/servicecatalog/cart/items/%s", cartItemSysID), nil, nil, &response)
+	err := cc.client.RawRootRequestWithContext(
+		ctx,
+		"DELETE",
+		buildCartItemPath(cartItemSysID),
+		nil,
+		nil,
+		&response,
+		core.FormatJSON,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to remove item from cart: %w", err)
 	}
@@ -194,8 +230,24 @@ func (cc *CatalogClient) ClearCart() error {
 
 // ClearCartWithContext clears the cart with context support
 func (cc *CatalogClient) ClearCartWithContext(ctx context.Context) error {
+	cart, err := cc.GetCartWithContext(ctx)
+	if err != nil {
+		return fmt.Errorf("failed to resolve cart id before clear: %w", err)
+	}
+	if cart.CartID == "" {
+		return fmt.Errorf("cart id not found in cart response")
+	}
+
 	var response map[string]interface{}
-	err := cc.client.RawRequestWithContext(ctx, "DELETE", "/sn_sc/servicecatalog/cart", nil, nil, &response)
+	err = cc.client.RawRootRequestWithContext(
+		ctx,
+		"DELETE",
+		buildClearCartPath(cart.CartID),
+		nil,
+		nil,
+		&response,
+		core.FormatJSON,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to clear cart: %w", err)
 	}
@@ -215,7 +267,15 @@ func (cc *CatalogClient) SubmitCart() (*OrderResult, error) {
 // SubmitCartWithContext submits the cart with context support
 func (cc *CatalogClient) SubmitCartWithContext(ctx context.Context) (*OrderResult, error) {
 	var response map[string]interface{}
-	err := cc.client.RawRequestWithContext(ctx, "POST", "/sn_sc/servicecatalog/cart/submit_order", nil, nil, &response)
+	err := cc.client.RawRootRequestWithContext(
+		ctx,
+		"POST",
+		buildSubmitOrderPath(),
+		nil,
+		nil,
+		&response,
+		core.FormatJSON,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to submit cart: %w", err)
 	}
@@ -276,7 +336,15 @@ func (cc *CatalogClient) OrderNowWithContext(ctx context.Context, itemSysID stri
 
 	// Use ServiceNow's Service Catalog API to order directly
 	var response map[string]interface{}
-	err := cc.client.RawRequestWithContext(ctx, "POST", fmt.Sprintf("/sn_sc/servicecatalog/items/%s/order_now", itemSysID), request, nil, &response)
+	err := cc.client.RawRootRequestWithContext(
+		ctx,
+		"POST",
+		buildOrderNowPath(itemSysID),
+		request,
+		nil,
+		&response,
+		core.FormatJSON,
+	)
 	if err != nil {
 		return nil, fmt.Errorf("failed to order item: %w", err)
 	}
@@ -355,6 +423,40 @@ type PriceEstimate struct {
 	Currency       string                 `json:"currency"`
 	Variables      map[string]interface{} `json:"variables"`
 	EstimatedDate  string                 `json:"estimated_date,omitempty"`
+}
+
+const serviceCatalogAPIBasePath = "/api/sn_sc/servicecatalog"
+
+func buildAddToCartPath(itemSysID string) string {
+	return fmt.Sprintf("%s/items/%s/add_to_cart", serviceCatalogAPIBasePath, itemSysID)
+}
+
+func buildCartPath() string {
+	return fmt.Sprintf("%s/cart", serviceCatalogAPIBasePath)
+}
+
+func buildCartItemPath(cartItemSysID string) string {
+	return fmt.Sprintf("%s/cart/%s", serviceCatalogAPIBasePath, cartItemSysID)
+}
+
+func buildClearCartPath(cartID string) string {
+	return fmt.Sprintf("%s/cart/%s/empty", serviceCatalogAPIBasePath, cartID)
+}
+
+func buildSubmitOrderPath() string {
+	return fmt.Sprintf("%s/cart/submit_order", serviceCatalogAPIBasePath)
+}
+
+func buildOrderNowPath(itemSysID string) string {
+	return fmt.Sprintf("%s/items/%s/order_now", serviceCatalogAPIBasePath, itemSysID)
+}
+
+func extractCartID(result map[string]interface{}) string {
+	cartID := getString(result["cart_id"])
+	if cartID != "" {
+		return cartID
+	}
+	return getString(result["sys_id"])
 }
 
 // validateItemAndVariables validates that an item exists and variables are valid

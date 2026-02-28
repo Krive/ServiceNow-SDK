@@ -3,6 +3,8 @@ package catalog
 import (
 	"context"
 	"fmt"
+	"strconv"
+	"strings"
 
 	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/core"
 )
@@ -31,14 +33,14 @@ type Catalog struct {
 
 // Category represents a catalog category
 type Category struct {
-	SysID         string `json:"sys_id"`
-	Title         string `json:"title"`
-	Description   string `json:"description"`
-	Active        bool   `json:"active"`
-	CatalogSysID  string `json:"sc_catalog"`
-	ParentSysID   string `json:"parent"`
-	Icon          string `json:"icon"`
-	Order         int    `json:"order"`
+	SysID        string `json:"sys_id"`
+	Title        string `json:"title"`
+	Description  string `json:"description"`
+	Active       bool   `json:"active"`
+	CatalogSysID string `json:"sc_catalog"`
+	ParentSysID  string `json:"parent"`
+	Icon         string `json:"icon"`
+	Order        int    `json:"order"`
 }
 
 // CatalogItem represents a catalog item
@@ -68,22 +70,22 @@ type CatalogItem struct {
 
 // CatalogVariable represents a catalog item variable
 type CatalogVariable struct {
-	SysID              string                 `json:"sys_id"`
-	Name               string                 `json:"name"`
-	Question           string                 `json:"question"`
-	Type               string                 `json:"type"`
-	Mandatory          bool                   `json:"mandatory"`
-	Active             bool                   `json:"active"`
-	DefaultValue       string                 `json:"default_value"`
-	HelpText           string                 `json:"help_text"`
-	Order              int                    `json:"order"`
-	ReadOnly           bool                   `json:"read_only"`
-	Visible            bool                   `json:"visible"`
-	ChoiceTable        string                 `json:"choice_table"`
-	ChoiceField        string                 `json:"choice_field"`
-	ReferenceTable     string                 `json:"reference"`
-	Choices            []VariableChoice       `json:"choices,omitempty"`
-	Attributes         map[string]interface{} `json:"attributes,omitempty"`
+	SysID          string                 `json:"sys_id"`
+	Name           string                 `json:"name"`
+	Question       string                 `json:"question"`
+	Type           string                 `json:"type"`
+	Mandatory      bool                   `json:"mandatory"`
+	Active         bool                   `json:"active"`
+	DefaultValue   string                 `json:"default_value"`
+	HelpText       string                 `json:"help_text"`
+	Order          int                    `json:"order"`
+	ReadOnly       bool                   `json:"read_only"`
+	Visible        bool                   `json:"visible"`
+	ChoiceTable    string                 `json:"choice_table"`
+	ChoiceField    string                 `json:"choice_field"`
+	ReferenceTable string                 `json:"reference"`
+	Choices        []VariableChoice       `json:"choices,omitempty"`
+	Attributes     map[string]interface{} `json:"attributes,omitempty"`
 }
 
 // VariableChoice represents a choice for a variable
@@ -102,8 +104,8 @@ func (cc *CatalogClient) ListCatalogs() ([]Catalog, error) {
 // ListCatalogsWithContext returns all available catalogs with context support
 func (cc *CatalogClient) ListCatalogsWithContext(ctx context.Context) ([]Catalog, error) {
 	params := map[string]string{
-		"sysparm_query":  "active=true",
-		"sysparm_fields": "sys_id,title,description,active,background_color,icon",
+		"sysparm_query":   "active=true",
+		"sysparm_fields":  "sys_id,title,description,active,background_color,icon",
 		"sysparm_orderby": "order,title",
 	}
 
@@ -177,8 +179,8 @@ func (cc *CatalogClient) ListCategories(catalogSysID string) ([]Category, error)
 // ListCategoriesWithContext returns categories for a catalog with context support
 func (cc *CatalogClient) ListCategoriesWithContext(ctx context.Context, catalogSysID string) ([]Category, error) {
 	params := map[string]string{
-		"sysparm_query":  fmt.Sprintf("sc_catalog=%s^active=true", catalogSysID),
-		"sysparm_fields": "sys_id,title,description,active,sc_catalog,parent,icon,order",
+		"sysparm_query":   fmt.Sprintf("sc_catalog=%s^active=true", catalogSysID),
+		"sysparm_fields":  "sys_id,title,description,active,sc_catalog,parent,icon,order",
 		"sysparm_orderby": "order,title",
 	}
 
@@ -224,8 +226,8 @@ func (cc *CatalogClient) ListAllCategories() ([]Category, error) {
 // ListAllCategoriesWithContext returns all active categories with context support
 func (cc *CatalogClient) ListAllCategoriesWithContext(ctx context.Context) ([]Category, error) {
 	params := map[string]string{
-		"sysparm_query":  "active=true",
-		"sysparm_fields": "sys_id,title,description,active,sc_catalog,parent,icon,order",
+		"sysparm_query":   "active=true",
+		"sysparm_fields":  "sys_id,title,description,active,sc_catalog,parent,icon,order",
 		"sysparm_orderby": "sc_catalog,order,title",
 	}
 
@@ -302,9 +304,10 @@ func (cc *CatalogClient) SearchCategories(searchTerm string) ([]Category, error)
 
 // SearchCategoriesWithContext searches categories with context support
 func (cc *CatalogClient) SearchCategoriesWithContext(ctx context.Context, searchTerm string) ([]Category, error) {
+	cleanSearchTerm := sanitizeQueryTerm(searchTerm)
 	params := map[string]string{
-		"sysparm_query":  fmt.Sprintf("active=true^titleCONTAINS%s^ORdescriptionCONTAINS%s", searchTerm, searchTerm),
-		"sysparm_fields": "sys_id,title,description,active,sc_catalog,parent,icon,order",
+		"sysparm_query":   fmt.Sprintf("active=true^titleCONTAINS%s^ORdescriptionCONTAINS%s", cleanSearchTerm, cleanSearchTerm),
+		"sysparm_fields":  "sys_id,title,description,active,sc_catalog,parent,icon,order",
 		"sysparm_orderby": "title",
 	}
 
@@ -350,6 +353,13 @@ func getString(value interface{}) string {
 	return ""
 }
 
+func sanitizeQueryTerm(value string) string {
+	cleaned := strings.ReplaceAll(value, "^", " ")
+	cleaned = strings.ReplaceAll(cleaned, "\n", " ")
+	cleaned = strings.ReplaceAll(cleaned, "\r", " ")
+	return cleaned
+}
+
 func getBool(value interface{}) bool {
 	if b, ok := value.(bool); ok {
 		return b
@@ -371,8 +381,9 @@ func getInt(value interface{}) int {
 		if str == "" {
 			return 0
 		}
-		// Try to parse string as int
-		// For simplicity, we'll just return 0 if parsing fails
+		if i, err := strconv.Atoi(str); err == nil {
+			return i
+		}
 		return 0
 	}
 	return 0

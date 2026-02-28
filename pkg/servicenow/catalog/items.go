@@ -16,8 +16,8 @@ func (cc *CatalogClient) ListItems(catalogSysID string) ([]CatalogItem, error) {
 // ListItemsWithContext returns catalog items with context support
 func (cc *CatalogClient) ListItemsWithContext(ctx context.Context, catalogSysID string) ([]CatalogItem, error) {
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("sc_catalog=%s^active=true", catalogSysID),
-		"sysparm_fields": "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
+		"sysparm_query":   fmt.Sprintf("sc_catalog=%s^active=true", catalogSysID),
+		"sysparm_fields":  "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
 		"sysparm_orderby": "order,name",
 	}
 
@@ -38,8 +38,8 @@ func (cc *CatalogClient) ListItemsByCategory(categorySysID string) ([]CatalogIte
 // ListItemsByCategoryWithContext returns catalog items by category with context support
 func (cc *CatalogClient) ListItemsByCategoryWithContext(ctx context.Context, categorySysID string) ([]CatalogItem, error) {
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("category=%s^active=true", categorySysID),
-		"sysparm_fields": "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
+		"sysparm_query":   fmt.Sprintf("category=%s^active=true", categorySysID),
+		"sysparm_fields":  "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
 		"sysparm_orderby": "order,name",
 	}
 
@@ -60,8 +60,8 @@ func (cc *CatalogClient) ListAllItems() ([]CatalogItem, error) {
 // ListAllItemsWithContext returns all active catalog items with context support
 func (cc *CatalogClient) ListAllItemsWithContext(ctx context.Context) ([]CatalogItem, error) {
 	params := map[string]string{
-		"sysparm_query": "active=true",
-		"sysparm_fields": "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
+		"sysparm_query":   "active=true",
+		"sysparm_fields":  "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
 		"sysparm_orderby": "sc_catalog,order,name",
 	}
 
@@ -127,8 +127,8 @@ func (cc *CatalogClient) GetItemVariables(itemSysID string) ([]CatalogVariable, 
 // GetItemVariablesWithContext returns variables for a catalog item with context support
 func (cc *CatalogClient) GetItemVariablesWithContext(ctx context.Context, itemSysID string) ([]CatalogVariable, error) {
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("cat_item=%s^active=true", itemSysID),
-		"sysparm_fields": "sys_id,name,question,type,mandatory,active,default_value,help_text,order,read_only,visible,choice_table,choice_field,reference",
+		"sysparm_query":   fmt.Sprintf("cat_item=%s^active=true", itemSysID),
+		"sysparm_fields":  "sys_id,name,question,type,mandatory,active,default_value,help_text,order,read_only,visible,choice_table,choice_field,reference",
 		"sysparm_orderby": "order,name",
 	}
 
@@ -184,8 +184,8 @@ func (cc *CatalogClient) GetItemVariablesWithContext(ctx context.Context, itemSy
 // getVariableChoicesWithContext returns choices for a variable
 func (cc *CatalogClient) getVariableChoicesWithContext(ctx context.Context, variableSysID string) ([]VariableChoice, error) {
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("question=%s^inactive=false", variableSysID),
-		"sysparm_fields": "value,text,dependent_value,order",
+		"sysparm_query":   fmt.Sprintf("question=%s^inactive=false", variableSysID),
+		"sysparm_fields":  "value,text,dependent_value,order",
 		"sysparm_orderby": "order,text",
 	}
 
@@ -226,9 +226,10 @@ func (cc *CatalogClient) SearchItems(searchTerm string) ([]CatalogItem, error) {
 
 // SearchItemsWithContext searches catalog items with context support
 func (cc *CatalogClient) SearchItemsWithContext(ctx context.Context, searchTerm string) ([]CatalogItem, error) {
+	cleanSearchTerm := sanitizeQueryTerm(searchTerm)
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("active=true^nameCONTAINS%s^ORshort_descriptionCONTAINS%s^ORdescriptionCONTAINS%s", searchTerm, searchTerm, searchTerm),
-		"sysparm_fields": "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
+		"sysparm_query":   fmt.Sprintf("active=true^nameCONTAINS%s^ORshort_descriptionCONTAINS%s^ORdescriptionCONTAINS%s", cleanSearchTerm, cleanSearchTerm, cleanSearchTerm),
+		"sysparm_fields":  "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
 		"sysparm_orderby": "name",
 	}
 
@@ -249,8 +250,8 @@ func (cc *CatalogClient) GetItemsByType(itemType string) ([]CatalogItem, error) 
 // GetItemsByTypeWithContext returns catalog items by type with context support
 func (cc *CatalogClient) GetItemsByTypeWithContext(ctx context.Context, itemType string) ([]CatalogItem, error) {
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("active=true^type=%s", itemType),
-		"sysparm_fields": "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
+		"sysparm_query":   fmt.Sprintf("active=true^type=%s", itemType),
+		"sysparm_fields":  "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
 		"sysparm_orderby": "name",
 	}
 
@@ -271,8 +272,8 @@ func (cc *CatalogClient) GetOrderGuides() ([]CatalogItem, error) {
 // GetOrderGuidesWithContext returns order guides with context support
 func (cc *CatalogClient) GetOrderGuidesWithContext(ctx context.Context) ([]CatalogItem, error) {
 	params := map[string]string{
-		"sysparm_query": "active=true^order_guide=true",
-		"sysparm_fields": "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
+		"sysparm_query":   "active=true^order_guide=true",
+		"sysparm_fields":  "sys_id,name,short_description,description,active,sc_catalog,category,price,recurring_price,icon,picture,type,template,workflow,available_for,order_guide,request_method,approval_designation,delivery_catalog",
 		"sysparm_orderby": "name",
 	}
 

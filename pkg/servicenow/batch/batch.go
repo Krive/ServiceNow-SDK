@@ -35,19 +35,19 @@ const (
 
 // BatchRequest represents the entire batch request payload
 type BatchRequest struct {
-	BatchRequestID  string       `json:"batch_request_id"`
-	EnforceOrder    bool         `json:"enforce_order,omitempty"`
-	RestRequests    []RestRequest `json:"rest_requests"`
+	BatchRequestID string        `json:"batch_request_id"`
+	EnforceOrder   bool          `json:"enforce_order,omitempty"`
+	RestRequests   []RestRequest `json:"rest_requests"`
 }
 
 // RestRequest represents an individual request within a batch
 type RestRequest struct {
-	ID                      string   `json:"id"`
-	URL                     string   `json:"url"`
-	Method                  HTTPMethod `json:"method"`
-	Headers                 []Header `json:"headers,omitempty"`
-	Body                    string   `json:"body,omitempty"` // Base64 encoded
-	ExcludeResponseHeaders  bool     `json:"exclude_response_headers,omitempty"`
+	ID                     string     `json:"id"`
+	URL                    string     `json:"url"`
+	Method                 HTTPMethod `json:"method"`
+	Headers                []Header   `json:"headers,omitempty"`
+	Body                   string     `json:"body,omitempty"` // Base64 encoded
+	ExcludeResponseHeaders bool       `json:"exclude_response_headers,omitempty"`
 }
 
 // Header represents a HTTP header
@@ -58,9 +58,9 @@ type Header struct {
 
 // BatchResponse represents the response from a batch request
 type BatchResponse struct {
-	BatchRequestID      string            `json:"batch_request_id"`
-	ServicedRequests    []ServicedRequest `json:"serviced_requests"`
-	UnservicedRequests  []UnservicedRequest `json:"unserviced_requests"`
+	BatchRequestID     string              `json:"batch_request_id"`
+	ServicedRequests   []ServicedRequest   `json:"serviced_requests"`
+	UnservicedRequests []UnservicedRequest `json:"unserviced_requests"`
 }
 
 // ServicedRequest represents a successfully processed request
@@ -82,10 +82,11 @@ type UnservicedRequest struct {
 
 // BatchBuilder provides a fluent interface for building batch requests
 type BatchBuilder struct {
-	client      *BatchClient
-	requestID   string
+	client       *BatchClient
+	requestID    string
 	enforceOrder bool
-	requests    []RestRequest
+	requests     []RestRequest
+	err          error
 }
 
 // NewBatch creates a new batch builder
@@ -115,7 +116,7 @@ func (bb *BatchBuilder) Get(id, url string) *BatchBuilder {
 	request := RestRequest{
 		ID:                     id,
 		URL:                    url,
-		Method:                MethodGET,
+		Method:                 MethodGET,
 		ExcludeResponseHeaders: true,
 		Headers: []Header{
 			{Name: "Accept", Value: "application/json"},
@@ -127,13 +128,20 @@ func (bb *BatchBuilder) Get(id, url string) *BatchBuilder {
 
 // Create adds a POST request to the batch
 func (bb *BatchBuilder) Create(id, tableName string, data map[string]interface{}) *BatchBuilder {
-	body, _ := json.Marshal(data)
+	if bb.err != nil {
+		return bb
+	}
+	body, err := json.Marshal(data)
+	if err != nil {
+		bb.err = fmt.Errorf("failed to marshal create payload for request %q: %w", id, err)
+		return bb
+	}
 	encodedBody := base64.StdEncoding.EncodeToString(body)
-	
+
 	request := RestRequest{
 		ID:                     id,
 		URL:                    fmt.Sprintf("/api/now/table/%s", tableName),
-		Method:                MethodPOST,
+		Method:                 MethodPOST,
 		ExcludeResponseHeaders: true,
 		Headers: []Header{
 			{Name: "Content-Type", Value: "application/json"},
@@ -147,13 +155,20 @@ func (bb *BatchBuilder) Create(id, tableName string, data map[string]interface{}
 
 // Update adds a PATCH request to the batch
 func (bb *BatchBuilder) Update(id, tableName, sysID string, data map[string]interface{}) *BatchBuilder {
-	body, _ := json.Marshal(data)
+	if bb.err != nil {
+		return bb
+	}
+	body, err := json.Marshal(data)
+	if err != nil {
+		bb.err = fmt.Errorf("failed to marshal update payload for request %q: %w", id, err)
+		return bb
+	}
 	encodedBody := base64.StdEncoding.EncodeToString(body)
-	
+
 	request := RestRequest{
 		ID:                     id,
 		URL:                    fmt.Sprintf("/api/now/table/%s/%s", tableName, sysID),
-		Method:                MethodPATCH,
+		Method:                 MethodPATCH,
 		ExcludeResponseHeaders: true,
 		Headers: []Header{
 			{Name: "Content-Type", Value: "application/json"},
@@ -167,13 +182,20 @@ func (bb *BatchBuilder) Update(id, tableName, sysID string, data map[string]inte
 
 // Replace adds a PUT request to the batch
 func (bb *BatchBuilder) Replace(id, tableName, sysID string, data map[string]interface{}) *BatchBuilder {
-	body, _ := json.Marshal(data)
+	if bb.err != nil {
+		return bb
+	}
+	body, err := json.Marshal(data)
+	if err != nil {
+		bb.err = fmt.Errorf("failed to marshal replace payload for request %q: %w", id, err)
+		return bb
+	}
 	encodedBody := base64.StdEncoding.EncodeToString(body)
-	
+
 	request := RestRequest{
 		ID:                     id,
 		URL:                    fmt.Sprintf("/api/now/table/%s/%s", tableName, sysID),
-		Method:                MethodPUT,
+		Method:                 MethodPUT,
 		ExcludeResponseHeaders: true,
 		Headers: []Header{
 			{Name: "Content-Type", Value: "application/json"},
@@ -190,7 +212,7 @@ func (bb *BatchBuilder) Delete(id, tableName, sysID string) *BatchBuilder {
 	request := RestRequest{
 		ID:                     id,
 		URL:                    fmt.Sprintf("/api/now/table/%s/%s", tableName, sysID),
-		Method:                MethodDELETE,
+		Method:                 MethodDELETE,
 		ExcludeResponseHeaders: true,
 	}
 	bb.requests = append(bb.requests, request)
@@ -210,6 +232,9 @@ func (bb *BatchBuilder) Execute() (*BatchResult, error) {
 
 // ExecuteWithContext executes the batch request with context support
 func (bb *BatchBuilder) ExecuteWithContext(ctx context.Context) (*BatchResult, error) {
+	if bb.err != nil {
+		return nil, bb.err
+	}
 	if len(bb.requests) == 0 {
 		return nil, fmt.Errorf("batch request cannot be empty")
 	}
@@ -221,7 +246,7 @@ func (bb *BatchBuilder) ExecuteWithContext(ctx context.Context) (*BatchResult, e
 	}
 
 	var response BatchResponse
-	err := bb.client.client.RawRequestWithContext(ctx, "POST", "/batch", batchRequest, nil, &response)
+	err := bb.client.client.RawRequestWithContext(ctx, "POST", "/v1/batch", batchRequest, nil, &response)
 	if err != nil {
 		return nil, fmt.Errorf("batch request failed: %w", err)
 	}
@@ -356,12 +381,12 @@ func (bc *BatchClient) CreateMultiple(tableName string, records []map[string]int
 // CreateMultipleWithContext creates multiple records with context support
 func (bc *BatchClient) CreateMultipleWithContext(ctx context.Context, tableName string, records []map[string]interface{}) (*BatchResult, error) {
 	batch := bc.NewBatch()
-	
+
 	for i, record := range records {
 		id := fmt.Sprintf("create_%d", i+1)
 		batch.Create(id, tableName, record)
 	}
-	
+
 	return batch.ExecuteWithContext(ctx)
 }
 
@@ -373,14 +398,14 @@ func (bc *BatchClient) UpdateMultiple(tableName string, updates map[string]map[s
 // UpdateMultipleWithContext updates multiple records with context support
 func (bc *BatchClient) UpdateMultipleWithContext(ctx context.Context, tableName string, updates map[string]map[string]interface{}) (*BatchResult, error) {
 	batch := bc.NewBatch()
-	
+
 	i := 1
 	for sysID, data := range updates {
 		id := fmt.Sprintf("update_%d", i)
 		batch.Update(id, tableName, sysID, data)
 		i++
 	}
-	
+
 	return batch.ExecuteWithContext(ctx)
 }
 
@@ -392,12 +417,12 @@ func (bc *BatchClient) DeleteMultiple(tableName string, sysIDs []string) (*Batch
 // DeleteMultipleWithContext deletes multiple records with context support
 func (bc *BatchClient) DeleteMultipleWithContext(ctx context.Context, tableName string, sysIDs []string) (*BatchResult, error) {
 	batch := bc.NewBatch()
-	
+
 	for i, sysID := range sysIDs {
 		id := fmt.Sprintf("delete_%d", i+1)
 		batch.Delete(id, tableName, sysID)
 	}
-	
+
 	return batch.ExecuteWithContext(ctx)
 }
 
@@ -409,13 +434,13 @@ func (bc *BatchClient) GetMultiple(tableName string, sysIDs []string) (*BatchRes
 // GetMultipleWithContext retrieves multiple records with context support
 func (bc *BatchClient) GetMultipleWithContext(ctx context.Context, tableName string, sysIDs []string) (*BatchResult, error) {
 	batch := bc.NewBatch()
-	
+
 	for i, sysID := range sysIDs {
 		id := fmt.Sprintf("get_%d", i+1)
 		url := fmt.Sprintf("/api/now/table/%s/%s", tableName, sysID)
 		batch.Get(id, url)
 	}
-	
+
 	return batch.ExecuteWithContext(ctx)
 }
 
@@ -464,28 +489,28 @@ func (bc *BatchClient) ExecuteMixed(operations MixedOperations) (*BatchResult, e
 // ExecuteMixedWithContext executes mixed operations with context support
 func (bc *BatchClient) ExecuteMixedWithContext(ctx context.Context, operations MixedOperations) (*BatchResult, error) {
 	batch := bc.NewBatch()
-	
+
 	// Add create operations
 	for _, op := range operations.Creates {
 		batch.Create(op.ID, op.TableName, op.Data)
 	}
-	
+
 	// Add update operations
 	for _, op := range operations.Updates {
 		batch.Update(op.ID, op.TableName, op.SysID, op.Data)
 	}
-	
+
 	// Add delete operations
 	for _, op := range operations.Deletes {
 		batch.Delete(op.ID, op.TableName, op.SysID)
 	}
-	
+
 	// Add get operations
 	for _, op := range operations.Gets {
 		url := fmt.Sprintf("/api/now/table/%s/%s", op.TableName, op.SysID)
 		batch.Get(op.ID, url)
 	}
-	
+
 	return batch.ExecuteWithContext(ctx)
 }
 
@@ -494,14 +519,14 @@ func ExtractRecordData(result *RequestResult) (map[string]interface{}, error) {
 	if result.Data == nil {
 		return nil, fmt.Errorf("no data in result")
 	}
-	
+
 	// ServiceNow typically wraps single records in a "result" field
 	if resultField, exists := result.Data["result"]; exists {
 		if record, ok := resultField.(map[string]interface{}); ok {
 			return record, nil
 		}
 	}
-	
+
 	// If no "result" wrapper, return the data as-is
 	return result.Data, nil
 }
@@ -509,7 +534,7 @@ func ExtractRecordData(result *RequestResult) (map[string]interface{}, error) {
 // Helper method to extract multiple records from batch result
 func ExtractMultipleRecords(results map[string]*RequestResult) ([]map[string]interface{}, error) {
 	var records []map[string]interface{}
-	
+
 	for _, result := range results {
 		record, err := ExtractRecordData(result)
 		if err != nil {
@@ -517,6 +542,6 @@ func ExtractMultipleRecords(results map[string]*RequestResult) ([]map[string]int
 		}
 		records = append(records, record)
 	}
-	
+
 	return records, nil
 }

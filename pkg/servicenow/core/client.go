@@ -4,22 +4,25 @@ import (
 	"context"
 	"encoding/json"
 	"encoding/xml"
+	"errors"
 	"fmt"
+	"net"
+	"strings"
 	"time"
 
-	"github.com/go-resty/resty/v2"
 	"github.com/Krive/ServiceNow-SDK/pkg/utils/ratelimit"
 	"github.com/Krive/ServiceNow-SDK/pkg/utils/retry"
+	"github.com/go-resty/resty/v2"
 )
 
 type Client struct {
-	InstanceURL   string // Root instance URL for non-/api/now endpoints
-	BaseURL       string
-	Client        *resty.Client
-	Auth          AuthProvider
-	rateLimiter   *ratelimit.ServiceNowLimiter
-	retryConfig   retry.Config
-	timeout       time.Duration
+	InstanceURL string // Root instance URL for non-/api/now endpoints
+	BaseURL     string
+	Client      *resty.Client
+	Auth        AuthProvider
+	rateLimiter *ratelimit.ServiceNowLimiter
+	retryConfig retry.Config
+	timeout     time.Duration
 }
 
 func NewClientBasicAuth(instanceURL, username, password string) (*Client, error) {
@@ -30,8 +33,22 @@ func NewClientOAuth(instanceURL, clientID, clientSecret string) (*Client, error)
 	return newClient(instanceURL, NewOAuthClientCredentials(instanceURL, clientID, clientSecret))
 }
 
+func NewClientOAuthWithStorage(instanceURL, clientID, clientSecret string, storage TokenStorage) (*Client, error) {
+	if storage == nil {
+		return NewClientOAuth(instanceURL, clientID, clientSecret)
+	}
+	return newClient(instanceURL, NewOAuthClientCredentialsWithStorage(instanceURL, clientID, clientSecret, storage))
+}
+
 func NewClientOAuthRefresh(instanceURL, clientID, clientSecret, refreshToken string) (*Client, error) {
 	return newClient(instanceURL, NewOAuthAuthorizationCode(instanceURL, clientID, clientSecret, refreshToken))
+}
+
+func NewClientOAuthRefreshWithStorage(instanceURL, clientID, clientSecret, refreshToken string, storage TokenStorage) (*Client, error) {
+	if storage == nil {
+		return NewClientOAuthRefresh(instanceURL, clientID, clientSecret, refreshToken)
+	}
+	return newClient(instanceURL, NewOAuthAuthorizationCodeWithStorage(instanceURL, clientID, clientSecret, refreshToken, storage))
 }
 
 func NewClientAPIKey(instanceURL, apiKey string) (*Client, error) {
@@ -51,7 +68,7 @@ func newClient(instanceURL string, auth AuthProvider) (*Client, error) {
 
 	// Initialize rate limiter with default ServiceNow configuration
 	rateLimiter := ratelimit.NewServiceNowLimiter(ratelimit.DefaultServiceNowConfig())
-	
+
 	// Initialize retry configuration optimized for ServiceNow
 	retryConfig := retry.ServiceNowRetryConfig()
 
@@ -74,7 +91,10 @@ const (
 // HandleResponse processes API responses with format support
 func (c *Client) HandleResponse(resp *resty.Response, err error, target interface{}, format string) error {
 	if err != nil {
-		return err
+		return classifyRequestError(err)
+	}
+	if resp == nil {
+		return fmt.Errorf("no response received")
 	}
 	if !resp.IsSuccess() {
 		// Attempt to parse error response (assume JSON for errors)
@@ -85,7 +105,7 @@ func (c *Client) HandleResponse(resp *resty.Response, err error, target interfac
 			} `json:"error"`
 		}
 		if jsonErr := json.Unmarshal(resp.Body(), &snErr); jsonErr == nil && snErr.Error.Message != "" {
-			return NewServiceNowError(resp.StatusCode(), snErr.Error.Message)
+			return NewServiceNowErrorWithDetail(resp.StatusCode(), snErr.Error.Message, snErr.Error.Detail)
 		}
 		return NewServiceNowError(resp.StatusCode(), string(resp.Body()))
 	}
@@ -112,32 +132,32 @@ func (c *Client) RawRequest(method, path string, body interface{}, params map[st
 func (c *Client) RawRequestWithContext(ctx context.Context, method, path string, body interface{}, params map[string]string, result interface{}) error {
 	// Determine endpoint type for rate limiting
 	endpointType := ratelimit.DetectEndpointType(path)
-	
+
 	// Apply rate limiting
 	if err := c.rateLimiter.Wait(ctx, endpointType); err != nil {
 		return fmt.Errorf("rate limit wait failed: %w", err)
 	}
-	
+
 	// Execute with retry logic
 	return retry.Do(ctx, c.retryConfig, func() error {
-		return c.executeRequest(method, path, body, params, result, FormatJSON)
+		return c.executeRequest(ctx, method, path, body, params, result, FormatJSON)
 	})
 }
 
 // executeRequest performs the actual HTTP request
-func (c *Client) executeRequest(method, path string, body interface{}, params map[string]string, result interface{}, format string) error {
+func (c *Client) executeRequest(ctx context.Context, method, path string, body interface{}, params map[string]string, result interface{}, format string) error {
 	if err := c.Auth.Apply(c.Client); err != nil {
 		return fmt.Errorf("failed to apply auth: %w", err)
 	}
 
-	req := c.Client.R()
+	req := c.Client.R().SetContext(ctx)
 	if body != nil {
 		req.SetBody(body)
 	}
 	for k, v := range params {
 		req.SetQueryParam(k, v)
 	}
-	
+
 	resp, err := req.Execute(method, path)
 	return c.HandleResponse(resp, err, result, format)
 }
@@ -151,29 +171,25 @@ func (c *Client) RawRootRequest(method, path string, body interface{}, params ma
 func (c *Client) RawRootRequestWithContext(ctx context.Context, method, path string, body interface{}, params map[string]string, result interface{}, format string) error {
 	// Determine endpoint type for rate limiting
 	endpointType := ratelimit.DetectEndpointType(path)
-	
+
 	// Apply rate limiting
 	if err := c.rateLimiter.Wait(ctx, endpointType); err != nil {
 		return fmt.Errorf("rate limit wait failed: %w", err)
 	}
-	
+
 	// Execute with retry logic
 	return retry.Do(ctx, c.retryConfig, func() error {
-		return c.executeRootRequest(method, path, body, params, result, format)
+		return c.executeRootRequest(ctx, method, path, body, params, result, format)
 	})
 }
 
 // executeRootRequest performs the actual HTTP request to root URL
-func (c *Client) executeRootRequest(method, path string, body interface{}, params map[string]string, result interface{}, format string) error {
-	originalBase := c.Client.BaseURL
-	c.Client.SetBaseURL(c.InstanceURL)
-	defer c.Client.SetBaseURL(originalBase)
-
+func (c *Client) executeRootRequest(ctx context.Context, method, path string, body interface{}, params map[string]string, result interface{}, format string) error {
 	if err := c.Auth.Apply(c.Client); err != nil {
 		return fmt.Errorf("failed to apply auth: %w", err)
 	}
 
-	req := c.Client.R()
+	req := c.Client.R().SetContext(ctx)
 	if format == FormatXML {
 		req.SetHeader("Accept", "application/xml")
 	}
@@ -183,8 +199,98 @@ func (c *Client) executeRootRequest(method, path string, body interface{}, param
 	for k, v := range params {
 		req.SetQueryParam(k, v)
 	}
-	resp, err := req.Execute(method, path)
+	requestURL := path
+	if !strings.HasPrefix(path, "http://") && !strings.HasPrefix(path, "https://") {
+		if !strings.HasPrefix(path, "/") {
+			path = "/" + path
+		}
+		requestURL = c.InstanceURL + path
+	}
+	resp, err := req.Execute(method, requestURL)
 	return c.HandleResponse(resp, err, result, format)
+}
+
+// UploadFileWithContext uploads a file via multipart form data with auth, rate limiting and retry.
+func (c *Client) UploadFileWithContext(
+	ctx context.Context,
+	path string,
+	fileField string,
+	filePath string,
+	formData map[string]string,
+	result interface{},
+) error {
+	endpointType := ratelimit.DetectEndpointType(path)
+	if err := c.rateLimiter.Wait(ctx, endpointType); err != nil {
+		return fmt.Errorf("rate limit wait failed: %w", err)
+	}
+
+	return retry.Do(ctx, c.retryConfig, func() error {
+		if err := c.Auth.Apply(c.Client); err != nil {
+			return fmt.Errorf("failed to apply auth: %w", err)
+		}
+
+		req := c.Client.R().SetContext(ctx).SetMultipartFormData(formData).SetFile(fileField, filePath)
+		resp, err := req.Post(path)
+		return c.HandleResponse(resp, err, result, FormatJSON)
+	})
+}
+
+// DownloadFileWithContext downloads a file to disk with auth, rate limiting and retry.
+func (c *Client) DownloadFileWithContext(ctx context.Context, path string, params map[string]string, outputPath string) error {
+	endpointType := ratelimit.DetectEndpointType(path)
+	if err := c.rateLimiter.Wait(ctx, endpointType); err != nil {
+		return fmt.Errorf("rate limit wait failed: %w", err)
+	}
+
+	return retry.Do(ctx, c.retryConfig, func() error {
+		if err := c.Auth.Apply(c.Client); err != nil {
+			return fmt.Errorf("failed to apply auth: %w", err)
+		}
+
+		req := c.Client.R().SetContext(ctx).SetOutput(outputPath)
+		for k, v := range params {
+			req.SetQueryParam(k, v)
+		}
+
+		resp, err := req.Get(path)
+		if err != nil {
+			return classifyRequestError(err)
+		}
+		if !resp.IsSuccess() {
+			return c.HandleResponse(resp, nil, nil, FormatJSON)
+		}
+		return nil
+	})
+}
+
+func classifyRequestError(err error) error {
+	if err == nil {
+		return nil
+	}
+
+	if errors.Is(err, context.Canceled) {
+		return err
+	}
+
+	if errors.Is(err, context.DeadlineExceeded) {
+		return NewTimeoutError(err.Error())
+	}
+
+	var netErr net.Error
+	if errors.As(err, &netErr) {
+		if netErr.Timeout() {
+			return NewTimeoutError(netErr.Error())
+		}
+		return &ServiceNowError{
+			Type:       ErrorTypeNetwork,
+			Message:    netErr.Error(),
+			Code:       "NETWORK_ERROR",
+			StatusCode: 0,
+			Retryable:  true,
+		}
+	}
+
+	return err
 }
 
 // SetTimeout sets the request timeout for the client

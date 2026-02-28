@@ -1,7 +1,9 @@
 package core
 
 import (
+	"crypto/sha256"
 	"encoding/base64"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"os"
@@ -31,23 +33,51 @@ type FileTokenStorage struct {
 	directory string
 }
 
+// MemoryTokenStorage keeps OAuth tokens in-memory only (no persistence on disk).
+type MemoryTokenStorage struct {
+	mu     sync.RWMutex
+	tokens map[string]storedOAuthToken
+}
+
+type storedOAuthToken struct {
+	Token     OAuthToken `json:"token"`
+	ExpiresAt time.Time  `json:"expires_at,omitempty"`
+}
+
 // NewFileTokenStorage creates a new file-based token storage
 func NewFileTokenStorage(directory string) *FileTokenStorage {
 	if directory == "" {
 		// Default to user's home directory/.servicenowtoolkit/tokens
-		homeDir, _ := os.UserHomeDir()
+		homeDir, err := os.UserHomeDir()
+		if err != nil || homeDir == "" {
+			homeDir = os.TempDir()
+		}
 		directory = filepath.Join(homeDir, ".servicenowtoolkit", "tokens")
 	}
 
 	// Ensure directory exists
-	os.MkdirAll(directory, 0700)
+	_ = os.MkdirAll(directory, 0700)
 
 	return &FileTokenStorage{directory: directory}
 }
 
+// NewMemoryTokenStorage creates a token store that does not write to disk.
+func NewMemoryTokenStorage() *MemoryTokenStorage {
+	return &MemoryTokenStorage{
+		tokens: make(map[string]storedOAuthToken),
+	}
+}
+
 func (f *FileTokenStorage) Save(key string, token *OAuthToken) error {
-	filename := filepath.Join(f.directory, key+".json")
-	data, err := json.Marshal(token)
+	filename := f.tokenFilePath(key)
+	stored := storedOAuthToken{
+		Token: *token,
+	}
+	if token.ExpiresIn > 0 {
+		stored.ExpiresAt = time.Now().Add(time.Duration(token.ExpiresIn) * time.Second)
+	}
+
+	data, err := json.Marshal(stored)
 	if err != nil {
 		return fmt.Errorf("failed to marshal token: %w", err)
 	}
@@ -56,7 +86,7 @@ func (f *FileTokenStorage) Save(key string, token *OAuthToken) error {
 }
 
 func (f *FileTokenStorage) Load(key string) (*OAuthToken, error) {
-	filename := filepath.Join(f.directory, key+".json")
+	filename := f.tokenFilePath(key)
 	data, err := os.ReadFile(filename)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -65,6 +95,21 @@ func (f *FileTokenStorage) Load(key string) (*OAuthToken, error) {
 		return nil, fmt.Errorf("failed to read token file: %w", err)
 	}
 
+	var stored storedOAuthToken
+	if err := json.Unmarshal(data, &stored); err == nil && (stored.Token.AccessToken != "" || stored.Token.RefreshToken != "" || !stored.ExpiresAt.IsZero()) {
+		token := stored.Token
+		if !stored.ExpiresAt.IsZero() {
+			remaining := time.Until(stored.ExpiresAt)
+			if remaining <= 0 {
+				token.ExpiresIn = 0
+			} else {
+				token.ExpiresIn = int(remaining.Round(time.Second) / time.Second)
+			}
+		}
+		return &token, nil
+	}
+
+	// Backward compatibility with plain OAuthToken storage format.
 	var token OAuthToken
 	if err := json.Unmarshal(data, &token); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal token: %w", err)
@@ -74,12 +119,56 @@ func (f *FileTokenStorage) Load(key string) (*OAuthToken, error) {
 }
 
 func (f *FileTokenStorage) Delete(key string) error {
-	filename := filepath.Join(f.directory, key+".json")
+	filename := f.tokenFilePath(key)
 	err := os.Remove(filename)
 	if os.IsNotExist(err) {
 		return nil // Already deleted
 	}
 	return err
+}
+
+func (f *FileTokenStorage) tokenFilePath(key string) string {
+	hash := sha256.Sum256([]byte(key))
+	return filepath.Join(f.directory, hex.EncodeToString(hash[:])+".json")
+}
+
+func (m *MemoryTokenStorage) Save(key string, token *OAuthToken) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	stored := storedOAuthToken{Token: *token}
+	if token.ExpiresIn > 0 {
+		stored.ExpiresAt = time.Now().Add(time.Duration(token.ExpiresIn) * time.Second)
+	}
+	m.tokens[key] = stored
+	return nil
+}
+
+func (m *MemoryTokenStorage) Load(key string) (*OAuthToken, error) {
+	m.mu.RLock()
+	stored, ok := m.tokens[key]
+	m.mu.RUnlock()
+	if !ok {
+		return nil, nil
+	}
+
+	token := stored.Token
+	if !stored.ExpiresAt.IsZero() {
+		remaining := time.Until(stored.ExpiresAt)
+		if remaining <= 0 {
+			token.ExpiresIn = 0
+		} else {
+			token.ExpiresIn = int(remaining.Round(time.Second) / time.Second)
+		}
+	}
+	return &token, nil
+}
+
+func (m *MemoryTokenStorage) Delete(key string) error {
+	m.mu.Lock()
+	delete(m.tokens, key)
+	m.mu.Unlock()
+	return nil
 }
 
 // BasicAuth handles username/password authentication
@@ -244,7 +333,11 @@ func (o *OAuthClientCredentials) Apply(client *resty.Client) error {
 		return fmt.Errorf("no token available")
 	}
 
-	client.SetHeader("Authorization", fmt.Sprintf("%s %s", o.token.TokenType, o.token.AccessToken))
+	tokenType := o.token.TokenType
+	if tokenType == "" {
+		tokenType = "Bearer"
+	}
+	client.SetHeader("Authorization", fmt.Sprintf("%s %s", tokenType, o.token.AccessToken))
 	return nil
 }
 
@@ -255,6 +348,7 @@ func (o *OAuthClientCredentials) IsExpired() bool {
 func (o *OAuthClientCredentials) Refresh() error {
 	// Create a temporary client for token refresh
 	tempClient := resty.New()
+	tempClient.SetTimeout(30 * time.Second)
 
 	resp, err := tempClient.R().
 		SetFormData(map[string]string{
@@ -281,10 +375,7 @@ func (o *OAuthClientCredentials) Refresh() error {
 
 	// Save token to storage
 	if o.storage != nil {
-		if err := o.storage.Save(o.storageKey, o.token); err != nil {
-			// Log but don't fail - storage is optional
-			fmt.Printf("Warning: failed to save token to storage: %v\n", err)
-		}
+		_ = o.storage.Save(o.storageKey, o.token)
 	}
 
 	return nil
@@ -325,6 +416,7 @@ func (o *OAuthAuthorizationCode) Refresh() error {
 
 	// Create a temporary client for token refresh
 	tempClient := resty.New()
+	tempClient.SetTimeout(30 * time.Second)
 
 	resp, err := tempClient.R().
 		SetFormData(map[string]string{
@@ -358,10 +450,7 @@ func (o *OAuthAuthorizationCode) Refresh() error {
 
 	// Save token to storage
 	if o.storage != nil {
-		if err := o.storage.Save(o.storageKey, o.token); err != nil {
-			// Log but don't fail - storage is optional
-			fmt.Printf("Warning: failed to save token to storage: %v\n", err)
-		}
+		_ = o.storage.Save(o.storageKey, o.token)
 	}
 
 	return nil

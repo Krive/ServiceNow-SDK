@@ -16,110 +16,110 @@ type CMDBClient struct {
 
 // ConfigurationItem represents a Configuration Item in ServiceNow
 type ConfigurationItem struct {
-	SysID                 string                 `json:"sys_id"`
-	Name                  string                 `json:"name"`
-	SysClassName          string                 `json:"sys_class_name"`
-	State                 string                 `json:"install_status"`
-	OperationalStatus     string                 `json:"operational_status"`
-	Category              string                 `json:"category"`
-	Subcategory           string                 `json:"subcategory"`
-	Environment           string                 `json:"environment"`
-	Location              string                 `json:"location"`
-	Owner                 string                 `json:"owned_by"`
-	SupportGroup          string                 `json:"support_group"`
-	AssignedTo            string                 `json:"assigned_to"`
-	SerialNumber          string                 `json:"serial_number"`
-	AssetTag              string                 `json:"asset_tag"`
-	ModelID               string                 `json:"model_id"`
-	ModelNumber           string                 `json:"model_number"`
-	Manufacturer          string                 `json:"manufacturer"`
-	Vendor                string                 `json:"vendor"`
-	ShortDescription      string                 `json:"short_description"`
-	Description           string                 `json:"description"`
-	IPAddress             string                 `json:"ip_address"`
-	MacAddress            string                 `json:"mac_address"`
-	FQDN                  string                 `json:"fqdn"`
-	DNSDomain             string                 `json:"dns_domain"`
-	OSName                string                 `json:"os"`
-	OSVersion             string                 `json:"os_version"`
-	OSServicePack         string                 `json:"os_service_pack"`
-	CPUCount              int                    `json:"cpu_count"`
-	CPUSpeed              string                 `json:"cpu_speed"`
-	CPUType               string                 `json:"cpu_type"`
-	RAM                   string                 `json:"ram"`
-	DiskSpace             string                 `json:"disk_space"`
-	CostCenter            string                 `json:"cost_center"`
-	PurchaseDate          time.Time              `json:"purchase_date"`
-	WarrantyExpiration    time.Time              `json:"warranty_expiration"`
-	LeaseID               string                 `json:"lease_id"`
-	CostCC                string                 `json:"cost"`
-	Depreciation          string                 `json:"depreciation"`
-	SalvageValue          string                 `json:"salvage_value"`
-	FirstDiscovered       time.Time              `json:"first_discovered"`
-	LastDiscovered        time.Time              `json:"last_discovered"`
-	DiscoverySource       string                 `json:"discovery_source"`
-	Attributes            map[string]interface{} `json:"attributes,omitempty"`
-	BusinessService       string                 `json:"business_service"`
-	Application           string                 `json:"application"`
-	ChangeControl         string                 `json:"change_control"`
-	MaintenanceSchedule   string                 `json:"maintenance_schedule"`
-	MonitoringTool        string                 `json:"monitoring_tool"`
-	BackupTool            string                 `json:"backup_tool"`
-	AntivirusSoftware     string                 `json:"antivirus_software"`
-	PatchGroup            string                 `json:"patch_group"`
-	ComplianceStatus      string                 `json:"compliance_status"`
-	SecurityClassification string                `json:"security_classification"`
-	CreatedBy             string                 `json:"sys_created_by"`
-	CreatedOn             time.Time              `json:"sys_created_on"`
-	UpdatedBy             string                 `json:"sys_updated_by"`
-	UpdatedOn             time.Time              `json:"sys_updated_on"`
+	SysID                  string                 `json:"sys_id"`
+	Name                   string                 `json:"name"`
+	SysClassName           string                 `json:"sys_class_name"`
+	State                  string                 `json:"install_status"`
+	OperationalStatus      string                 `json:"operational_status"`
+	Category               string                 `json:"category"`
+	Subcategory            string                 `json:"subcategory"`
+	Environment            string                 `json:"environment"`
+	Location               string                 `json:"location"`
+	Owner                  string                 `json:"owned_by"`
+	SupportGroup           string                 `json:"support_group"`
+	AssignedTo             string                 `json:"assigned_to"`
+	SerialNumber           string                 `json:"serial_number"`
+	AssetTag               string                 `json:"asset_tag"`
+	ModelID                string                 `json:"model_id"`
+	ModelNumber            string                 `json:"model_number"`
+	Manufacturer           string                 `json:"manufacturer"`
+	Vendor                 string                 `json:"vendor"`
+	ShortDescription       string                 `json:"short_description"`
+	Description            string                 `json:"description"`
+	IPAddress              string                 `json:"ip_address"`
+	MacAddress             string                 `json:"mac_address"`
+	FQDN                   string                 `json:"fqdn"`
+	DNSDomain              string                 `json:"dns_domain"`
+	OSName                 string                 `json:"os"`
+	OSVersion              string                 `json:"os_version"`
+	OSServicePack          string                 `json:"os_service_pack"`
+	CPUCount               int                    `json:"cpu_count"`
+	CPUSpeed               string                 `json:"cpu_speed"`
+	CPUType                string                 `json:"cpu_type"`
+	RAM                    string                 `json:"ram"`
+	DiskSpace              string                 `json:"disk_space"`
+	CostCenter             string                 `json:"cost_center"`
+	PurchaseDate           time.Time              `json:"purchase_date"`
+	WarrantyExpiration     time.Time              `json:"warranty_expiration"`
+	LeaseID                string                 `json:"lease_id"`
+	CostCC                 string                 `json:"cost"`
+	Depreciation           string                 `json:"depreciation"`
+	SalvageValue           string                 `json:"salvage_value"`
+	FirstDiscovered        time.Time              `json:"first_discovered"`
+	LastDiscovered         time.Time              `json:"last_discovered"`
+	DiscoverySource        string                 `json:"discovery_source"`
+	Attributes             map[string]interface{} `json:"attributes,omitempty"`
+	BusinessService        string                 `json:"business_service"`
+	Application            string                 `json:"application"`
+	ChangeControl          string                 `json:"change_control"`
+	MaintenanceSchedule    string                 `json:"maintenance_schedule"`
+	MonitoringTool         string                 `json:"monitoring_tool"`
+	BackupTool             string                 `json:"backup_tool"`
+	AntivirusSoftware      string                 `json:"antivirus_software"`
+	PatchGroup             string                 `json:"patch_group"`
+	ComplianceStatus       string                 `json:"compliance_status"`
+	SecurityClassification string                 `json:"security_classification"`
+	CreatedBy              string                 `json:"sys_created_by"`
+	CreatedOn              time.Time              `json:"sys_created_on"`
+	UpdatedBy              string                 `json:"sys_updated_by"`
+	UpdatedOn              time.Time              `json:"sys_updated_on"`
 }
 
 // CIRelationship represents a relationship between Configuration Items
 type CIRelationship struct {
-	SysID          string                 `json:"sys_id"`
-	Parent         string                 `json:"parent"`
-	Child          string                 `json:"child"`
-	Type           string                 `json:"type"`
-	ConnectionType string                 `json:"connection_type"`
-	ParentDescriptor string               `json:"parent_descriptor"`
-	ChildDescriptor string                `json:"child_descriptor"`
-	Direction      string                 `json:"direction"`
-	Weight         int                    `json:"weight"`
-	Attributes     map[string]interface{} `json:"attributes,omitempty"`
-	CreatedBy      string                 `json:"sys_created_by"`
-	CreatedOn      time.Time              `json:"sys_created_on"`
-	UpdatedBy      string                 `json:"sys_updated_by"`
-	UpdatedOn      time.Time              `json:"sys_updated_on"`
+	SysID            string                 `json:"sys_id"`
+	Parent           string                 `json:"parent"`
+	Child            string                 `json:"child"`
+	Type             string                 `json:"type"`
+	ConnectionType   string                 `json:"connection_type"`
+	ParentDescriptor string                 `json:"parent_descriptor"`
+	ChildDescriptor  string                 `json:"child_descriptor"`
+	Direction        string                 `json:"direction"`
+	Weight           int                    `json:"weight"`
+	Attributes       map[string]interface{} `json:"attributes,omitempty"`
+	CreatedBy        string                 `json:"sys_created_by"`
+	CreatedOn        time.Time              `json:"sys_created_on"`
+	UpdatedBy        string                 `json:"sys_updated_by"`
+	UpdatedOn        time.Time              `json:"sys_updated_on"`
 }
 
 // CIClass represents a Configuration Item class definition
 type CIClass struct {
-	SysID         string   `json:"sys_id"`
-	Name          string   `json:"name"`
-	Label         string   `json:"label"`
-	SuperClass    string   `json:"super_class"`
-	TableName     string   `json:"name"`
-	Package       string   `json:"sys_package"`
-	Active        bool     `json:"active"`
-	Abstract      bool     `json:"abstract"`
-	Extensible    bool     `json:"extensible"`
-	NumberPrefix  string   `json:"number_ref"`
-	Attributes    []string `json:"attributes,omitempty"`
-	Description   string   `json:"sys_documentation"`
-	CreatedBy     string   `json:"sys_created_by"`
-	CreatedOn     time.Time `json:"sys_created_on"`
-	UpdatedBy     string   `json:"sys_updated_by"`
-	UpdatedOn     time.Time `json:"sys_updated_on"`
+	SysID        string    `json:"sys_id"`
+	Name         string    `json:"name"`
+	Label        string    `json:"label"`
+	SuperClass   string    `json:"super_class"`
+	TableName    string    `json:"table_name"`
+	Package      string    `json:"sys_package"`
+	Active       bool      `json:"active"`
+	Abstract     bool      `json:"abstract"`
+	Extensible   bool      `json:"extensible"`
+	NumberPrefix string    `json:"number_ref"`
+	Attributes   []string  `json:"attributes,omitempty"`
+	Description  string    `json:"sys_documentation"`
+	CreatedBy    string    `json:"sys_created_by"`
+	CreatedOn    time.Time `json:"sys_created_on"`
+	UpdatedBy    string    `json:"sys_updated_by"`
+	UpdatedOn    time.Time `json:"sys_updated_on"`
 }
 
 // CIDependencyMap represents a dependency mapping for a CI
 type CIDependencyMap struct {
-	RootCI       *ConfigurationItem   `json:"root_ci"`
-	Dependencies []*ConfigurationItem `json:"dependencies"`
-	Dependents   []*ConfigurationItem `json:"dependents"`
-	Relationships []*CIRelationship   `json:"relationships"`
-	Depth        int                  `json:"depth"`
+	RootCI        *ConfigurationItem   `json:"root_ci"`
+	Dependencies  []*ConfigurationItem `json:"dependencies"`
+	Dependents    []*ConfigurationItem `json:"dependents"`
+	Relationships []*CIRelationship    `json:"relationships"`
+	Depth         int                  `json:"depth"`
 }
 
 // CIFilter provides filtering options for CI queries
@@ -155,24 +155,24 @@ type CIReconciliationRequest struct {
 
 // ReconciliationOptions contains options for CI reconciliation
 type ReconciliationOptions struct {
-	CreateMissing     bool     `json:"create_missing"`
-	UpdateExisting    bool     `json:"update_existing"`
-	MatchingRules     []string `json:"matching_rules,omitempty"`
+	CreateMissing      bool     `json:"create_missing"`
+	UpdateExisting     bool     `json:"update_existing"`
+	MatchingRules      []string `json:"matching_rules,omitempty"`
 	ConflictResolution string   `json:"conflict_resolution"`
-	DryRun            bool     `json:"dry_run"`
-	ClassName         string   `json:"class_name,omitempty"`
+	DryRun             bool     `json:"dry_run"`
+	ClassName          string   `json:"class_name,omitempty"`
 }
 
 // CIReconciliationResult contains the result of CI reconciliation
 type CIReconciliationResult struct {
-	Created       []*ConfigurationItem `json:"created"`
-	Updated       []*ConfigurationItem `json:"updated"`
-	Skipped       []string             `json:"skipped"`
-	Errors        []ReconciliationError `json:"errors"`
-	TotalItems    int                  `json:"total_items"`
-	SuccessCount  int                  `json:"success_count"`
-	ErrorCount    int                  `json:"error_count"`
-	SkippedCount  int                  `json:"skipped_count"`
+	Created      []*ConfigurationItem  `json:"created"`
+	Updated      []*ConfigurationItem  `json:"updated"`
+	Skipped      []string              `json:"skipped"`
+	Errors       []ReconciliationError `json:"errors"`
+	TotalItems   int                   `json:"total_items"`
+	SuccessCount int                   `json:"success_count"`
+	ErrorCount   int                   `json:"error_count"`
+	SkippedCount int                   `json:"skipped_count"`
 }
 
 // ReconciliationError represents an error during reconciliation
@@ -185,8 +185,8 @@ type ReconciliationError struct {
 
 // CIIdentificationRequest contains data for CI identification
 type CIIdentificationRequest struct {
-	Items      []map[string]interface{} `json:"items"`
-	Options    *IdentificationOptions   `json:"options,omitempty"`
+	Items   []map[string]interface{} `json:"items"`
+	Options *IdentificationOptions   `json:"options,omitempty"`
 }
 
 // IdentificationOptions contains options for CI identification
@@ -199,7 +199,7 @@ type IdentificationOptions struct {
 
 // CIIdentificationResult contains the result of CI identification
 type CIIdentificationResult struct {
-	Matches   []CIMatch `json:"matches"`
+	Matches   []CIMatch                `json:"matches"`
 	NoMatches []map[string]interface{} `json:"no_matches"`
 }
 
@@ -223,8 +223,27 @@ func (c *CMDBClient) GetCI(sysID string) (*ConfigurationItem, error) {
 
 // GetCIWithContext retrieves a Configuration Item by sys_id with context support
 func (c *CMDBClient) GetCIWithContext(ctx context.Context, sysID string) (*ConfigurationItem, error) {
+	var lookup core.Response
+	lookupParams := map[string]string{
+		"sysparm_fields": "sys_id,sys_class_name",
+	}
+	err := c.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/cmdb_ci/%s", sysID), nil, lookupParams, &lookup)
+	if err != nil {
+		return nil, fmt.Errorf("failed to resolve CI class: %w", err)
+	}
+
+	lookupData, ok := lookup.Result.(map[string]interface{})
+	if !ok {
+		return nil, fmt.Errorf("unexpected result type for CI class lookup: %T", lookup.Result)
+	}
+
+	className := extractReferenceString(lookupData["sys_class_name"])
+	if className == "" {
+		return nil, fmt.Errorf("sys_class_name not found for CI: %s", sysID)
+	}
+
 	var result core.Response
-	err := c.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/api/now/cmdb/instance/%s", sysID), nil, nil, &result)
+	err = c.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/cmdb/instance/%s/%s", className, sysID), nil, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get CI: %w", err)
 	}
@@ -237,6 +256,21 @@ func (c *CMDBClient) GetCIWithContext(ctx context.Context, sysID string) (*Confi
 	return c.mapDataToCI(ciData), nil
 }
 
+func extractReferenceString(value interface{}) string {
+	switch v := value.(type) {
+	case string:
+		return v
+	case map[string]interface{}:
+		if raw, ok := v["value"].(string); ok && raw != "" {
+			return raw
+		}
+		if display, ok := v["display_value"].(string); ok {
+			return display
+		}
+	}
+	return ""
+}
+
 // GetCIByClass retrieves a Configuration Item by class and sys_id
 func (c *CMDBClient) GetCIByClass(className, sysID string) (*ConfigurationItem, error) {
 	return c.GetCIByClassWithContext(context.Background(), className, sysID)
@@ -245,7 +279,7 @@ func (c *CMDBClient) GetCIByClass(className, sysID string) (*ConfigurationItem, 
 // GetCIByClassWithContext retrieves a Configuration Item by class and sys_id with context support
 func (c *CMDBClient) GetCIByClassWithContext(ctx context.Context, className, sysID string) (*ConfigurationItem, error) {
 	var result core.Response
-	err := c.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/api/now/table/%s/%s", className, sysID), nil, nil, &result)
+	err := c.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/%s/%s", className, sysID), nil, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get CI by class: %w", err)
 	}
@@ -266,14 +300,14 @@ func (c *CMDBClient) ListCIs(filter *CIFilter) ([]*ConfigurationItem, error) {
 // ListCIsWithContext retrieves Configuration Items based on filter criteria with context support
 func (c *CMDBClient) ListCIsWithContext(ctx context.Context, filter *CIFilter) ([]*ConfigurationItem, error) {
 	params := c.buildFilterParams(filter)
-	
+
 	tableName := "cmdb_ci"
 	if filter != nil && filter.Class != "" {
 		tableName = filter.Class
 	}
 
 	var result core.Response
-	err := c.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/api/now/table/%s", tableName), nil, params, &result)
+	err := c.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/%s", tableName), nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list CIs: %w", err)
 	}
@@ -303,7 +337,7 @@ func (c *CMDBClient) CreateCI(className string, ciData map[string]interface{}) (
 // CreateCIWithContext creates a new Configuration Item with context support
 func (c *CMDBClient) CreateCIWithContext(ctx context.Context, className string, ciData map[string]interface{}) (*ConfigurationItem, error) {
 	var result core.Response
-	err := c.client.RawRequestWithContext(ctx, "POST", fmt.Sprintf("/api/now/table/%s", className), ciData, nil, &result)
+	err := c.client.RawRequestWithContext(ctx, "POST", fmt.Sprintf("/table/%s", className), ciData, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create CI: %w", err)
 	}
@@ -324,7 +358,7 @@ func (c *CMDBClient) UpdateCI(className, sysID string, updates map[string]interf
 // UpdateCIWithContext updates an existing Configuration Item with context support
 func (c *CMDBClient) UpdateCIWithContext(ctx context.Context, className, sysID string, updates map[string]interface{}) (*ConfigurationItem, error) {
 	var result core.Response
-	err := c.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/api/now/table/%s/%s", className, sysID), updates, nil, &result)
+	err := c.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/table/%s/%s", className, sysID), updates, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update CI: %w", err)
 	}
@@ -344,7 +378,7 @@ func (c *CMDBClient) DeleteCI(className, sysID string) error {
 
 // DeleteCIWithContext removes a Configuration Item with context support
 func (c *CMDBClient) DeleteCIWithContext(ctx context.Context, className, sysID string) error {
-	err := c.client.RawRequestWithContext(ctx, "DELETE", fmt.Sprintf("/api/now/table/%s/%s", className, sysID), nil, nil, nil)
+	err := c.client.RawRequestWithContext(ctx, "DELETE", fmt.Sprintf("/table/%s/%s", className, sysID), nil, nil, nil)
 	if err != nil {
 		return fmt.Errorf("failed to delete CI: %w", err)
 	}
@@ -354,13 +388,13 @@ func (c *CMDBClient) DeleteCIWithContext(ctx context.Context, className, sysID s
 // Helper method to build filter parameters
 func (c *CMDBClient) buildFilterParams(filter *CIFilter) map[string]string {
 	params := make(map[string]string)
-	
+
 	if filter == nil {
 		return params
 	}
 
 	var queryParts []string
-	
+
 	if filter.State != "" {
 		queryParts = append(queryParts, fmt.Sprintf("install_status=%s", filter.State))
 	}
@@ -405,14 +439,43 @@ func (c *CMDBClient) buildFilterParams(filter *CIFilter) map[string]string {
 	if filter.Offset > 0 {
 		params["sysparm_offset"] = fmt.Sprintf("%d", filter.Offset)
 	}
-	if filter.OrderBy != "" {
-		params["sysparm_order"] = filter.OrderBy
+	if orderClause := buildEncodedOrderClause(filter.OrderBy); orderClause != "" {
+		queryParts = append(queryParts, orderClause)
+		params["sysparm_query"] = strings.Join(queryParts, "^")
 	}
 	if len(filter.Fields) > 0 {
 		params["sysparm_fields"] = strings.Join(filter.Fields, ",")
 	}
 
 	return params
+}
+
+func buildEncodedOrderClause(orderBy string) string {
+	order := strings.TrimSpace(orderBy)
+	if order == "" {
+		return ""
+	}
+
+	desc := false
+	upper := strings.ToUpper(order)
+	switch {
+	case strings.HasPrefix(order, "-"):
+		desc = true
+		order = strings.TrimSpace(order[1:])
+	case strings.HasPrefix(upper, "DESC "):
+		desc = true
+		order = strings.TrimSpace(order[5:])
+	case strings.HasPrefix(upper, "ASC "):
+		order = strings.TrimSpace(order[4:])
+	}
+
+	if order == "" {
+		return ""
+	}
+	if desc {
+		return "ORDERBYDESC" + order
+	}
+	return "ORDERBY" + order
 }
 
 // Helper method to map raw data to ConfigurationItem struct

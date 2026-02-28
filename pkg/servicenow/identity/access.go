@@ -18,16 +18,18 @@ func (i *IdentityClient) NewAccessClient() *AccessClient {
 	return &AccessClient{client: i}
 }
 
-// CheckAccess checks if a user has access to perform an operation on a table/record
+// CheckAccess performs a heuristic role-based access check.
+// It does not evaluate full ServiceNow ACL logic or script conditions.
 func (a *AccessClient) CheckAccess(request *AccessCheckRequest) (*AccessCheckResult, error) {
 	return a.CheckAccessWithContext(context.Background(), request)
 }
 
-// CheckAccessWithContext checks access with context support
+// CheckAccessWithContext performs a heuristic role-based access check with context support.
+// It does not evaluate full ServiceNow ACL logic or script conditions.
 func (a *AccessClient) CheckAccessWithContext(ctx context.Context, request *AccessCheckRequest) (*AccessCheckResult, error) {
 	// This would typically use ServiceNow's Access Control API or script includes
 	// For now, we'll implement a basic check using role assignments
-	
+
 	user, err := a.client.GetUserWithContext(ctx, request.UserSysID)
 	if err != nil {
 		return &AccessCheckResult{
@@ -59,11 +61,12 @@ func (a *AccessClient) CheckAccessWithContext(ctx context.Context, request *Acce
 		if err != nil {
 			continue
 		}
-		
+
 		if role.Name == "admin" || role.GrantsAdmin {
 			return &AccessCheckResult{
 				HasAccess: true,
-				GrantedBy: "admin role",
+				GrantedBy: "heuristic role check: admin role",
+				Reason:    "heuristic check only; this is not authoritative ACL evaluation",
 			}, nil
 		}
 	}
@@ -76,17 +79,18 @@ func (a *AccessClient) CheckAccessWithContext(ctx context.Context, request *Acce
 			if err != nil {
 				continue
 			}
-			
+
 			for _, requiredRole := range tableRoles {
 				if role.Name == requiredRole {
 					return &AccessCheckResult{
 						HasAccess: true,
-						GrantedBy: fmt.Sprintf("role: %s", role.Name),
+						GrantedBy: fmt.Sprintf("heuristic role check: %s", role.Name),
+						Reason:    "heuristic check only; this is not authoritative ACL evaluation",
 					}, nil
 				}
 			}
 		}
-		
+
 		return &AccessCheckResult{
 			HasAccess:     false,
 			Reason:        fmt.Sprintf("User lacks required role for %s on %s", request.Operation, request.Table),
@@ -96,7 +100,7 @@ func (a *AccessClient) CheckAccessWithContext(ctx context.Context, request *Acce
 
 	return &AccessCheckResult{
 		HasAccess: true,
-		Reason:    "Default access granted",
+		Reason:    "heuristic check only; default access granted (non-authoritative)",
 	}, nil
 }
 
@@ -161,7 +165,7 @@ func (a *AccessClient) GetActiveSessionsWithContext(ctx context.Context) ([]*Use
 	}
 
 	var result core.Response
-	err := a.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/sys_user_session", nil, params, &result)
+	err := a.client.client.RawRequestWithContext(ctx, "GET", "/table/sys_user_session", nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get active sessions: %w", err)
 	}
@@ -195,7 +199,7 @@ func (a *AccessClient) GetUserSessionsWithContext(ctx context.Context, userSysID
 	}
 
 	var result core.Response
-	err := a.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/sys_user_session", nil, params, &result)
+	err := a.client.client.RawRequestWithContext(ctx, "GET", "/table/sys_user_session", nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user sessions: %w", err)
 	}
@@ -229,7 +233,7 @@ func (a *AccessClient) GetUserPreferencesWithContext(ctx context.Context, userSy
 	}
 
 	var result core.Response
-	err := a.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/sys_user_preference", nil, params, &result)
+	err := a.client.client.RawRequestWithContext(ctx, "GET", "/table/sys_user_preference", nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user preferences: %w", err)
 	}
@@ -270,9 +274,9 @@ func (a *AccessClient) SetUserPreferenceWithContext(ctx context.Context, userSys
 			updates := map[string]interface{}{
 				"value": value,
 			}
-			
+
 			var result core.Response
-			err := a.client.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/api/now/table/sys_user_preference/%s", pref.SysID), updates, nil, &result)
+			err := a.client.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/table/sys_user_preference/%s", pref.SysID), updates, nil, &result)
 			if err != nil {
 				return nil, fmt.Errorf("failed to update user preference: %w", err)
 			}
@@ -295,7 +299,7 @@ func (a *AccessClient) SetUserPreferenceWithContext(ctx context.Context, userSys
 	}
 
 	var result core.Response
-	err = a.client.client.RawRequestWithContext(ctx, "POST", "/api/now/table/sys_user_preference", prefData, nil, &result)
+	err = a.client.client.RawRequestWithContext(ctx, "POST", "/table/sys_user_preference", prefData, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user preference: %w", err)
 	}
@@ -322,7 +326,7 @@ func (a *AccessClient) DeleteUserPreferenceWithContext(ctx context.Context, user
 	}
 
 	var result core.Response
-	err := a.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/sys_user_preference", nil, params, &result)
+	err := a.client.client.RawRequestWithContext(ctx, "GET", "/table/sys_user_preference", nil, params, &result)
 	if err != nil {
 		return fmt.Errorf("failed to find user preference: %w", err)
 	}
@@ -347,7 +351,7 @@ func (a *AccessClient) DeleteUserPreferenceWithContext(ctx context.Context, user
 	}
 
 	// Delete the preference
-	err = a.client.client.RawRequestWithContext(ctx, "DELETE", fmt.Sprintf("/api/now/table/sys_user_preference/%s", prefSysID), nil, nil, nil)
+	err = a.client.client.RawRequestWithContext(ctx, "DELETE", fmt.Sprintf("/table/sys_user_preference/%s", prefSysID), nil, nil, nil)
 	if err != nil {
 		return fmt.Errorf("failed to delete user preference: %w", err)
 	}
@@ -374,8 +378,8 @@ func (a *AccessClient) InvalidateUserSessionsWithContext(ctx context.Context, us
 			updates := map[string]interface{}{
 				"active": "false",
 			}
-			
-			err := a.client.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/api/now/table/sys_user_session/%s", session.SysID), updates, nil, nil)
+
+			err := a.client.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/table/sys_user_session/%s", session.SysID), updates, nil, nil)
 			if err != nil {
 				// Continue with other sessions if one fails
 				continue
@@ -418,7 +422,7 @@ func (a *AccessClient) GetUserPermissionsWithContext(ctx context.Context, userSy
 		if role.Name == "admin" || role.GrantsAdmin {
 			permissions["admin"] = []string{"full_access"}
 		}
-		
+
 		if role.ElevatedPrivilege {
 			if _, exists := permissions["elevated"]; !exists {
 				permissions["elevated"] = []string{}

@@ -32,7 +32,7 @@ func (c *ClassClient) GetCIClassWithContext(ctx context.Context, className strin
 	}
 
 	var result core.Response
-	err := c.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/sys_db_object", nil, params, &result)
+	err := c.client.client.RawRequestWithContext(ctx, "GET", "/table/sys_db_object", nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get CI class: %w", err)
 	}
@@ -66,7 +66,7 @@ func (c *ClassClient) ListCIClassesWithContext(ctx context.Context) ([]*CIClass,
 	}
 
 	var result core.Response
-	err := c.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/sys_db_object", nil, params, &result)
+	err := c.client.client.RawRequestWithContext(ctx, "GET", "/table/sys_db_object", nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list CI classes: %w", err)
 	}
@@ -119,7 +119,7 @@ func (c *ClassClient) buildClassHierarchy(ctx context.Context, className string,
 	}
 
 	var result core.Response
-	err := c.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/sys_db_object", nil, params, &result)
+	err := c.client.client.RawRequestWithContext(ctx, "GET", "/table/sys_db_object", nil, params, &result)
 	if err != nil {
 		return fmt.Errorf("failed to get child classes for %s: %w", className, err)
 	}
@@ -176,12 +176,12 @@ func (c *ClassClient) GetClassAttributes(className string) ([]string, error) {
 // GetClassAttributesWithContext retrieves class attributes with context support
 func (c *ClassClient) GetClassAttributesWithContext(ctx context.Context, className string) ([]string, error) {
 	params := map[string]string{
-		"sysparm_query": fmt.Sprintf("name=%s", className),
+		"sysparm_query":  fmt.Sprintf("name=%s", className),
 		"sysparm_fields": "column_label,element",
 	}
 
 	var result core.Response
-	err := c.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/sys_dictionary", nil, params, &result)
+	err := c.client.client.RawRequestWithContext(ctx, "GET", "/table/sys_dictionary", nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get class attributes: %w", err)
 	}
@@ -375,7 +375,7 @@ func (i *IdentificationClient) identifyItem(ctx context.Context, item map[string
 	}
 
 	var result core.Response
-	err := i.client.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/api/now/table/%s", className), nil, params, &result)
+	err := i.client.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/%s", className), nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search for CI matches: %w", err)
 	}
@@ -417,7 +417,7 @@ func (i *IdentificationClient) calculateMatchScore(inputItem map[string]interfac
 
 	for _, attr := range matchingAttributes {
 		weight := 1.0
-		
+
 		// Give higher weight to unique identifiers
 		switch attr {
 		case "serial_number", "asset_tag":
@@ -615,7 +615,7 @@ func (r *ReconciliationClient) mergeData(inputData map[string]interface{}, exist
 // ciToMap converts a ConfigurationItem to a map
 func (r *ReconciliationClient) ciToMap(ci *ConfigurationItem) map[string]interface{} {
 	data := make(map[string]interface{})
-	
+
 	data["sys_id"] = ci.SysID
 	data["name"] = ci.Name
 	data["sys_class_name"] = ci.SysClassName
@@ -651,12 +651,12 @@ func (r *ReconciliationClient) ciToMap(ci *ConfigurationItem) map[string]interfa
 	data["cost_center"] = ci.CostCenter
 	data["business_service"] = ci.BusinessService
 	data["application"] = ci.Application
-	
+
 	// Add attributes
 	for k, v := range ci.Attributes {
 		data[k] = v
 	}
-	
+
 	return data
 }
 

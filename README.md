@@ -109,6 +109,27 @@ sn.NewClient(sn.Config{
 })
 ```
 
+### OAuth Token Storage
+
+For OAuth flows, tokens are cached by default in `~/.servicenowtoolkit/tokens` with file mode `0600`.
+For environments where tokens must not be persisted to disk, use in-memory storage:
+
+```go
+import (
+	sn "github.com/Krive/ServiceNow-SDK/pkg/servicenow"
+	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/core"
+)
+
+tokenStore := core.NewMemoryTokenStorage()
+
+client, err := sn.NewClient(sn.Config{
+	InstanceURL:  "https://your-instance.service-now.com",
+	ClientID:     "client-id",
+	ClientSecret: "client-secret",
+	TokenStorage: tokenStore,
+})
+```
+
 ## Common Usage
 
 ### Table CRUD
@@ -229,3 +250,66 @@ Run all tests:
 ```bash
 GOCACHE=/tmp/go-build go test ./...
 ```
+
+Run integration smoke tests:
+
+```bash
+SN_INSTANCE_URL="https://your-instance.service-now.com" \
+SN_USERNAME="api_user" \
+SN_PASSWORD="api_password" \
+GOCACHE=/tmp/go-build go test -tags=integration ./...
+```
+
+Optional integration env vars for extended smoke coverage:
+
+- `SN_CATALOG_ITEM_SYS_ID`: enables cart mutation smoke test (`add_to_cart`/`remove`)
+- `SN_CMDB_CI_SYS_ID`: enables CMDB `GetCI` smoke test
+- `SN_ATTACHMENT_TABLE` and `SN_ATTACHMENT_RECORD_SYS_ID`: enables attachment list/upload/download/delete smoke tests
+
+### API-Key Endpoint Smoke Script (PDI)
+
+For broad endpoint validation against a real instance, use:
+- `scripts/pdi_api_key_endpoint_smoke_test.sh`
+
+Basic mode (safe default behavior):
+
+```bash
+SN_INSTANCE_URL="https://devXXXXX.service-now.com" \
+SN_API_KEY="REPLACE_WITH_API_KEY" \
+SN_CONFIRM_INSTANCE_HOST="devXXXXX.service-now.com" \
+SN_TEST_LEVEL="basic" \
+SN_RUN_MUTATION=0 \
+bash scripts/pdi_api_key_endpoint_smoke_test.sh
+```
+
+Full mode (deep coverage, includes mutations):
+
+```bash
+SN_INSTANCE_URL="https://devXXXXX.service-now.com" \
+SN_API_KEY="REPLACE_WITH_API_KEY" \
+SN_CONFIRM_INSTANCE_HOST="devXXXXX.service-now.com" \
+SN_TEST_LEVEL="full" \
+SN_RUN_MUTATION=1 \
+SN_VERBOSE=0 \
+SN_TEST_TABLE="incident" \
+SN_ATTACHMENT_MIME_TYPE="text/plain" \
+SN_ATTACHMENT_FILE_EXT="txt" \
+SN_IMPORT_SET_TABLE="u_your_import_table" \
+SN_CATALOG_ITEM_SYS_ID="your_catalog_item_sys_id" \
+SN_CMDB_CREATE_CLASS="cmdb_ci_computer" \
+SN_CMDB_CREATE_PAYLOAD_JSON='{"name":"sdk-cmdb-full-smoke","short_description":"SDK full smoke"}' \
+SN_IDENTITY_DEEP_MUTATION=1 \
+bash scripts/pdi_api_key_endpoint_smoke_test.sh
+```
+
+Safety defaults in the smoke script:
+- `SN_RUN_MUTATION` defaults to `0`.
+- `SN_ENFORCE_PDI_ONLY` defaults to `1` and allows only `devNNNNNN.service-now.com` unless overridden.
+- `SN_ALLOW_NON_PDI` defaults to `0`.
+- `SN_ALLOW_PROD_MUTATION` defaults to `0`.
+- `SN_CONFIRM_INSTANCE_HOST` can enforce exact hostname matching.
+
+Interactive setup support:
+- If `SN_INSTANCE_URL` or `SN_API_KEY` is missing in an interactive shell, the script prompts for values.
+- Prompted values can be saved to `SN_ENV_FILE` (default `.sn_smoke_env`) and reused with `source .sn_smoke_env`.
+- Controls: `SN_SETUP_IF_MISSING=1|0`, `SN_SETUP_SAVE_ENV=ask|1|0`, `SN_ENV_FILE=<path>`.

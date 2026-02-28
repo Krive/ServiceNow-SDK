@@ -16,50 +16,74 @@ type IdentityClient struct {
 
 // User represents a ServiceNow user
 type User struct {
+	SysID               string                 `json:"sys_id"`
+	UserName            string                 `json:"user_name"`
+	FirstName           string                 `json:"first_name"`
+	LastName            string                 `json:"last_name"`
+	MiddleName          string                 `json:"middle_name"`
+	Name                string                 `json:"name"`
+	Email               string                 `json:"email"`
+	Phone               string                 `json:"phone"`
+	MobilePhone         string                 `json:"mobile_phone"`
+	Title               string                 `json:"title"`
+	Department          string                 `json:"department"`
+	Location            string                 `json:"location"`
+	Building            string                 `json:"building"`
+	Room                string                 `json:"room"`
+	Company             string                 `json:"company"`
+	CostCenter          string                 `json:"cost_center"`
+	Manager             string                 `json:"manager"`
+	Active              bool                   `json:"active"`
+	Locked              bool                   `json:"locked_out"`
+	PasswordNeedsReset  bool                   `json:"password_needs_reset"`
+	Source              string                 `json:"source"`
+	UserPassword        string                 `json:"user_password"`
+	LDAPServer          string                 `json:"ldap_server"`
+	EnableMultifactor   bool                   `json:"enable_multifactor_authn"`
+	FailedAttempts      int                    `json:"failed_attempts"`
+	LastLoginTime       time.Time              `json:"last_login_time"`
+	LastLoginDevice     string                 `json:"last_login_device"`
+	VIP                 bool                   `json:"vip"`
+	InternalIntegration bool                   `json:"internal_integration_user"`
+	WebServiceAccess    bool                   `json:"web_service_access_only"`
+	Avatar              string                 `json:"avatar"`
+	Photo               string                 `json:"photo"`
+	TimeZone            string                 `json:"time_zone"`
+	DateFormat          string                 `json:"date_format"`
+	TimeFormat          string                 `json:"time_format"`
+	Language            string                 `json:"preferred_language"`
+	Country             string                 `json:"country"`
+	State               string                 `json:"state"`
+	City                string                 `json:"city"`
+	Zip                 string                 `json:"zip"`
+	Address             string                 `json:"street"`
+	Schedule            string                 `json:"schedule"`
+	CalendarIntegration string                 `json:"calendar_integration"`
+	Roles               []string               `json:"roles,omitempty"`
+	Groups              []string               `json:"groups,omitempty"`
+	Attributes          map[string]interface{} `json:"attributes,omitempty"`
+	CreatedBy           string                 `json:"sys_created_by"`
+	CreatedOn           time.Time              `json:"sys_created_on"`
+	UpdatedBy           string                 `json:"sys_updated_by"`
+	UpdatedOn           time.Time              `json:"sys_updated_on"`
+}
+
+// Role represents a ServiceNow role
+type Role struct {
 	SysID                string                 `json:"sys_id"`
-	UserName             string                 `json:"user_name"`
-	FirstName            string                 `json:"first_name"`
-	LastName             string                 `json:"last_name"`
-	MiddleName           string                 `json:"middle_name"`
 	Name                 string                 `json:"name"`
-	Email                string                 `json:"email"`
-	Phone                string                 `json:"phone"`
-	MobilePhone          string                 `json:"mobile_phone"`
-	Title                string                 `json:"title"`
-	Department           string                 `json:"department"`
-	Location             string                 `json:"location"`
-	Building             string                 `json:"building"`
-	Room                 string                 `json:"room"`
-	Company              string                 `json:"company"`
-	CostCenter           string                 `json:"cost_center"`
-	Manager              string                 `json:"manager"`
+	Description          string                 `json:"description"`
 	Active               bool                   `json:"active"`
-	Locked               bool                   `json:"locked_out"`
-	PasswordNeedsReset   bool                   `json:"password_needs_reset"`
-	Source               string                 `json:"source"`
-	UserPassword         string                 `json:"user_password"`
-	LDAPServer           string                 `json:"ldap_server"`
-	EnableMultifactor    bool                   `json:"enable_multifactor_authn"`
-	FailedAttempts       int                    `json:"failed_attempts"`
-	LastLoginTime        time.Time              `json:"last_login_time"`
-	LastLoginDevice      string                 `json:"last_login_device"`
-	VIP                  bool                   `json:"vip"`
-	InternalIntegration  bool                   `json:"internal_integration_user"`
-	WebServiceAccess     bool                   `json:"web_service_access_only"`
-	Avatar               string                 `json:"avatar"`
-	Photo                string                 `json:"photo"`
-	TimeZone             string                 `json:"time_zone"`
-	DateFormat           string                 `json:"date_format"`
-	TimeFormat           string                 `json:"time_format"`
-	Language             string                 `json:"preferred_language"`
-	Country              string                 `json:"country"`
-	State                string                 `json:"state"`
-	City                 string                 `json:"city"`
-	Zip                  string                 `json:"zip"`
-	Address              string                 `json:"street"`
-	Schedule             string                 `json:"schedule"`
-	CalendarIntegration  string                 `json:"calendar_integration"`
-	Roles                []string               `json:"roles,omitempty"`
+	Assignable           bool                   `json:"assignable_by"`
+	CanDelegate          bool                   `json:"can_delegate"`
+	ElevatedPrivilege    bool                   `json:"elevated_privilege"`
+	IncludesRoles        []string               `json:"includes_roles,omitempty"`
+	RequiresSubscription string                 `json:"requires_subscription"`
+	Scoped               bool                   `json:"scoped"`
+	ApplicationScope     string                 `json:"application"`
+	Suffix               string                 `json:"suffix"`
+	GrantsAdmin          bool                   `json:"grants_admin"`
+	Users                []string               `json:"users,omitempty"`
 	Groups               []string               `json:"groups,omitempty"`
 	Attributes           map[string]interface{} `json:"attributes,omitempty"`
 	CreatedBy            string                 `json:"sys_created_by"`
@@ -68,52 +92,28 @@ type User struct {
 	UpdatedOn            time.Time              `json:"sys_updated_on"`
 }
 
-// Role represents a ServiceNow role
-type Role struct {
-	SysID            string                 `json:"sys_id"`
-	Name             string                 `json:"name"`
-	Description      string                 `json:"description"`
-	Active           bool                   `json:"active"`
-	Assignable       bool                   `json:"assignable_by"`
-	CanDelegate      bool                   `json:"can_delegate"`
-	ElevatedPrivilege bool                  `json:"elevated_privilege"`
-	IncludesRoles    []string               `json:"includes_roles,omitempty"`
-	RequiresSubscription string             `json:"requires_subscription"`
-	Scoped           bool                   `json:"scoped"`
-	ApplicationScope string                 `json:"application"`
-	Suffix           string                 `json:"suffix"`
-	GrantsAdmin      bool                   `json:"grants_admin"`
-	Users            []string               `json:"users,omitempty"`
-	Groups           []string               `json:"groups,omitempty"`
-	Attributes       map[string]interface{} `json:"attributes,omitempty"`
-	CreatedBy        string                 `json:"sys_created_by"`
-	CreatedOn        time.Time              `json:"sys_created_on"`
-	UpdatedBy        string                 `json:"sys_updated_by"`
-	UpdatedOn        time.Time              `json:"sys_updated_on"`
-}
-
 // Group represents a ServiceNow group
 type Group struct {
-	SysID          string                 `json:"sys_id"`
-	Name           string                 `json:"name"`
-	Description    string                 `json:"description"`
-	Type           string                 `json:"type"`
-	Active         bool                   `json:"active"`
-	Email          string                 `json:"email"`
-	Parent         string                 `json:"parent"`
-	Manager        string                 `json:"manager"`
-	CostCenter     string                 `json:"cost_center"`
-	DefaultAssignee string                `json:"default_assignee"`
-	IncludeMembers bool                   `json:"include_members"`
-	Points         int                    `json:"points"`
-	Source         string                 `json:"source"`
-	Members        []string               `json:"members,omitempty"`
-	Roles          []string               `json:"roles,omitempty"`
-	Attributes     map[string]interface{} `json:"attributes,omitempty"`
-	CreatedBy      string                 `json:"sys_created_by"`
-	CreatedOn      time.Time              `json:"sys_created_on"`
-	UpdatedBy      string                 `json:"sys_updated_by"`
-	UpdatedOn      time.Time              `json:"sys_updated_on"`
+	SysID           string                 `json:"sys_id"`
+	Name            string                 `json:"name"`
+	Description     string                 `json:"description"`
+	Type            string                 `json:"type"`
+	Active          bool                   `json:"active"`
+	Email           string                 `json:"email"`
+	Parent          string                 `json:"parent"`
+	Manager         string                 `json:"manager"`
+	CostCenter      string                 `json:"cost_center"`
+	DefaultAssignee string                 `json:"default_assignee"`
+	IncludeMembers  bool                   `json:"include_members"`
+	Points          int                    `json:"points"`
+	Source          string                 `json:"source"`
+	Members         []string               `json:"members,omitempty"`
+	Roles           []string               `json:"roles,omitempty"`
+	Attributes      map[string]interface{} `json:"attributes,omitempty"`
+	CreatedBy       string                 `json:"sys_created_by"`
+	CreatedOn       time.Time              `json:"sys_created_on"`
+	UpdatedBy       string                 `json:"sys_updated_by"`
+	UpdatedOn       time.Time              `json:"sys_updated_on"`
 }
 
 // UserRole represents a user-role assignment
@@ -129,28 +129,28 @@ type UserRole struct {
 
 // GroupMember represents a group membership
 type GroupMember struct {
-	SysID     string    `json:"sys_id"`
-	UserSysID string    `json:"user"`
-	GroupSysID string   `json:"group"`
-	AddedBy   string    `json:"sys_created_by"`
-	AddedOn   time.Time `json:"sys_created_on"`
+	SysID      string    `json:"sys_id"`
+	UserSysID  string    `json:"user"`
+	GroupSysID string    `json:"group"`
+	AddedBy    string    `json:"sys_created_by"`
+	AddedOn    time.Time `json:"sys_created_on"`
 }
 
 // UserSession represents an active user session
 type UserSession struct {
-	SysID           string    `json:"sys_id"`
-	UserSysID       string    `json:"user"`
-	LoginTime       time.Time `json:"login_time"`
-	LastAccessTime  time.Time `json:"last_access_time"`
-	IPAddress       string    `json:"ip_address"`
-	UserAgent       string    `json:"user_agent"`
-	SessionID       string    `json:"session_id"`
-	Active          bool      `json:"active"`
-	LoginType       string    `json:"login_type"`
-	Device          string    `json:"device"`
-	Application     string    `json:"application"`
-	IdleTime        int       `json:"idle_time"`
-	TimeZone        string    `json:"time_zone"`
+	SysID          string    `json:"sys_id"`
+	UserSysID      string    `json:"user"`
+	LoginTime      time.Time `json:"login_time"`
+	LastAccessTime time.Time `json:"last_access_time"`
+	IPAddress      string    `json:"ip_address"`
+	UserAgent      string    `json:"user_agent"`
+	SessionID      string    `json:"session_id"`
+	Active         bool      `json:"active"`
+	LoginType      string    `json:"login_type"`
+	Device         string    `json:"device"`
+	Application    string    `json:"application"`
+	IdleTime       int       `json:"idle_time"`
+	TimeZone       string    `json:"time_zone"`
 }
 
 // UserPreference represents a user preference setting
@@ -187,15 +187,15 @@ type UserFilter struct {
 
 // RoleFilter provides filtering options for role queries
 type RoleFilter struct {
-	Active           *bool    `json:"active,omitempty"`
-	Assignable       *bool    `json:"assignable,omitempty"`
-	ElevatedPrivilege *bool   `json:"elevated_privilege,omitempty"`
-	Application      string   `json:"application,omitempty"`
-	Name             string   `json:"name,omitempty"`
-	Limit            int      `json:"limit,omitempty"`
-	Offset           int      `json:"offset,omitempty"`
-	OrderBy          string   `json:"order_by,omitempty"`
-	Fields           []string `json:"fields,omitempty"`
+	Active            *bool    `json:"active,omitempty"`
+	Assignable        *bool    `json:"assignable,omitempty"`
+	ElevatedPrivilege *bool    `json:"elevated_privilege,omitempty"`
+	Application       string   `json:"application,omitempty"`
+	Name              string   `json:"name,omitempty"`
+	Limit             int      `json:"limit,omitempty"`
+	Offset            int      `json:"offset,omitempty"`
+	OrderBy           string   `json:"order_by,omitempty"`
+	Fields            []string `json:"fields,omitempty"`
 }
 
 // GroupFilter provides filtering options for group queries
@@ -241,7 +241,7 @@ func (i *IdentityClient) GetUser(sysID string) (*User, error) {
 // GetUserWithContext retrieves a user by sys_id with context support
 func (i *IdentityClient) GetUserWithContext(ctx context.Context, sysID string) (*User, error) {
 	var result core.Response
-	err := i.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/api/now/table/sys_user/%s", sysID), nil, nil, &result)
+	err := i.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/sys_user/%s", sysID), nil, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
@@ -267,7 +267,7 @@ func (i *IdentityClient) GetUserByUsernameWithContext(ctx context.Context, usern
 	}
 
 	var result core.Response
-	err := i.client.RawRequestWithContext(ctx, "GET", "/api/now/table/sys_user", nil, params, &result)
+	err := i.client.RawRequestWithContext(ctx, "GET", "/table/sys_user", nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user by username: %w", err)
 	}
@@ -299,7 +299,7 @@ func (i *IdentityClient) ListUsersWithContext(ctx context.Context, filter *UserF
 	params := i.buildUserFilterParams(filter)
 
 	var result core.Response
-	err := i.client.RawRequestWithContext(ctx, "GET", "/api/now/table/sys_user", nil, params, &result)
+	err := i.client.RawRequestWithContext(ctx, "GET", "/table/sys_user", nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list users: %w", err)
 	}
@@ -329,7 +329,7 @@ func (i *IdentityClient) CreateUser(userData map[string]interface{}) (*User, err
 // CreateUserWithContext creates a new user with context support
 func (i *IdentityClient) CreateUserWithContext(ctx context.Context, userData map[string]interface{}) (*User, error) {
 	var result core.Response
-	err := i.client.RawRequestWithContext(ctx, "POST", "/api/now/table/sys_user", userData, nil, &result)
+	err := i.client.RawRequestWithContext(ctx, "POST", "/table/sys_user", userData, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create user: %w", err)
 	}
@@ -350,7 +350,7 @@ func (i *IdentityClient) UpdateUser(sysID string, updates map[string]interface{}
 // UpdateUserWithContext updates an existing user with context support
 func (i *IdentityClient) UpdateUserWithContext(ctx context.Context, sysID string, updates map[string]interface{}) (*User, error) {
 	var result core.Response
-	err := i.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/api/now/table/sys_user/%s", sysID), updates, nil, &result)
+	err := i.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/table/sys_user/%s", sysID), updates, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update user: %w", err)
 	}
@@ -374,25 +374,25 @@ func (i *IdentityClient) DeleteUserWithContext(ctx context.Context, sysID string
 	updates := map[string]interface{}{
 		"active": "false",
 	}
-	
+
 	_, err := i.UpdateUserWithContext(ctx, sysID, updates)
 	if err != nil {
 		return fmt.Errorf("failed to deactivate user: %w", err)
 	}
-	
+
 	return nil
 }
 
 // Helper method to build user filter parameters
 func (i *IdentityClient) buildUserFilterParams(filter *UserFilter) map[string]string {
 	params := make(map[string]string)
-	
+
 	if filter == nil {
 		return params
 	}
 
 	var queryParts []string
-	
+
 	if filter.Active != nil {
 		queryParts = append(queryParts, fmt.Sprintf("active=%t", *filter.Active))
 	}
@@ -437,8 +437,9 @@ func (i *IdentityClient) buildUserFilterParams(filter *UserFilter) map[string]st
 	if filter.Offset > 0 {
 		params["sysparm_offset"] = fmt.Sprintf("%d", filter.Offset)
 	}
-	if filter.OrderBy != "" {
-		params["sysparm_order"] = filter.OrderBy
+	if orderClause := buildEncodedOrderClause(filter.OrderBy); orderClause != "" {
+		queryParts = append(queryParts, orderClause)
+		params["sysparm_query"] = strings.Join(queryParts, "^")
 	}
 	if len(filter.Fields) > 0 {
 		params["sysparm_fields"] = strings.Join(filter.Fields, ",")

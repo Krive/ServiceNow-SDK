@@ -18,24 +18,24 @@ type AttachmentClient struct {
 
 // Attachment represents a ServiceNow attachment record
 type Attachment struct {
-	SysID           string    `json:"sys_id"`
-	FileName        string    `json:"file_name"`
-	ContentType     string    `json:"content_type"`
-	SizeBytes       int64     `json:"size_bytes"`
-	SizeCompressed  int64     `json:"size_compressed"`
-	Compressed      bool      `json:"compressed"`
-	State           string    `json:"state"`
-	TableName       string    `json:"table_name"`
-	TableSysID      string    `json:"table_sys_id"`
-	DownloadLink    string    `json:"download_link"`
-	CreatedBy       string    `json:"sys_created_by"`
-	CreatedOn       time.Time `json:"sys_created_on"`
-	UpdatedBy       string    `json:"sys_updated_by"`
-	UpdatedOn       time.Time `json:"sys_updated_on"`
-	Hash            string    `json:"hash"`
-	AverageImageColor string  `json:"average_image_color"`
-	ImageWidth      int       `json:"image_width"`
-	ImageHeight     int       `json:"image_height"`
+	SysID             string    `json:"sys_id"`
+	FileName          string    `json:"file_name"`
+	ContentType       string    `json:"content_type"`
+	SizeBytes         int64     `json:"size_bytes"`
+	SizeCompressed    int64     `json:"size_compressed"`
+	Compressed        bool      `json:"compressed"`
+	State             string    `json:"state"`
+	TableName         string    `json:"table_name"`
+	TableSysID        string    `json:"table_sys_id"`
+	DownloadLink      string    `json:"download_link"`
+	CreatedBy         string    `json:"sys_created_by"`
+	CreatedOn         time.Time `json:"sys_created_on"`
+	UpdatedBy         string    `json:"sys_updated_by"`
+	UpdatedOn         time.Time `json:"sys_updated_on"`
+	Hash              string    `json:"hash"`
+	AverageImageColor string    `json:"average_image_color"`
+	ImageWidth        int       `json:"image_width"`
+	ImageHeight       int       `json:"image_height"`
 }
 
 // UploadRequest contains options for uploading an attachment
@@ -71,17 +71,17 @@ type UploadFromReaderRequest struct {
 
 // AttachmentFilter provides filtering options for listing attachments
 type AttachmentFilter struct {
-	TableName    string `json:"table_name,omitempty"`
-	TableSysID   string `json:"table_sys_id,omitempty"`
-	FileName     string `json:"file_name,omitempty"`
-	ContentType  string `json:"content_type,omitempty"`
-	CreatedBy    string `json:"sys_created_by,omitempty"`
-	CreatedAfter string `json:"created_after,omitempty"`
+	TableName     string `json:"table_name,omitempty"`
+	TableSysID    string `json:"table_sys_id,omitempty"`
+	FileName      string `json:"file_name,omitempty"`
+	ContentType   string `json:"content_type,omitempty"`
+	CreatedBy     string `json:"sys_created_by,omitempty"`
+	CreatedAfter  string `json:"created_after,omitempty"`
 	CreatedBefore string `json:"created_before,omitempty"`
-	MinSize      int64  `json:"min_size,omitempty"`
-	MaxSize      int64  `json:"max_size,omitempty"`
-	Limit        int    `json:"limit,omitempty"`
-	Offset       int    `json:"offset,omitempty"`
+	MinSize       int64  `json:"min_size,omitempty"`
+	MaxSize       int64  `json:"max_size,omitempty"`
+	Limit         int    `json:"limit,omitempty"`
+	Offset        int    `json:"offset,omitempty"`
 }
 
 // NewAttachmentClient creates a new attachment client
@@ -94,7 +94,7 @@ func ValidateFileName(fileName string) error {
 	if fileName == "" {
 		return fmt.Errorf("filename cannot be empty")
 	}
-	
+
 	// Check for invalid characters
 	invalidChars := []string{"<", ">", ":", "\"", "|", "?", "*", "/", "\\"}
 	for _, char := range invalidChars {
@@ -102,12 +102,12 @@ func ValidateFileName(fileName string) error {
 			return fmt.Errorf("filename contains invalid character: %s", char)
 		}
 	}
-	
+
 	// Check length
 	if len(fileName) > 255 {
 		return fmt.Errorf("filename too long (max 255 characters): %d", len(fileName))
 	}
-	
+
 	return nil
 }
 
@@ -138,11 +138,11 @@ func GetMimeType(fileName string) string {
 		".css":  "text/css",
 		".js":   "application/javascript",
 	}
-	
+
 	if mimeType, exists := mimeTypes[ext]; exists {
 		return mimeType
 	}
-	
+
 	return "application/octet-stream"
 }
 
@@ -184,23 +184,19 @@ func (a *AttachmentClient) Upload(tableName, sysID, filePath string) (map[string
 
 // UploadWithContext uploads a file as an attachment with context support
 func (a *AttachmentClient) UploadWithContext(ctx context.Context, tableName, sysID, filePath string) (map[string]interface{}, error) {
-	if err := a.client.Auth.Apply(a.client.Client); err != nil {
-		return nil, fmt.Errorf("failed to apply auth: %w", err)
-	}
-	resp, err := a.client.Client.R().
-		SetContext(ctx).
-		SetMultipartFormData(map[string]string{
+	var result core.Response
+	err := a.client.UploadFileWithContext(
+		ctx,
+		"/attachment/upload",
+		"file",
+		filePath,
+		map[string]string{
 			"table_name":   tableName,
 			"table_sys_id": sysID,
-		}).
-		SetFile("file", filePath).
-		Post("/attachment/upload")
-
+		},
+		&result,
+	)
 	if err != nil {
-		return nil, err
-	}
-	var result core.Response
-	if err := a.client.HandleResponse(resp, nil, &result, core.FormatJSON); err != nil {
 		return nil, err
 	}
 	attached, ok := result.Result.(map[string]interface{})
@@ -217,14 +213,7 @@ func (a *AttachmentClient) Download(sysID, savePath string) error {
 
 // DownloadWithContext downloads an attachment to a file with context support
 func (a *AttachmentClient) DownloadWithContext(ctx context.Context, sysID, savePath string) error {
-	resp, err := a.client.Client.R().SetContext(ctx).SetOutput(savePath).Get(fmt.Sprintf("/attachment/%s/file", sysID))
-	if err != nil {
-		return err
-	}
-	if !resp.IsSuccess() {
-		return fmt.Errorf("download failed: %s - %s", resp.Status(), string(resp.Body()))
-	}
-	return nil
+	return a.client.DownloadFileWithContext(ctx, fmt.Sprintf("/attachment/%s/file", sysID), nil, savePath)
 }
 
 // Delete removes an attachment

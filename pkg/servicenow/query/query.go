@@ -2,7 +2,6 @@ package query
 
 import (
 	"fmt"
-	"net/url"
 	"strconv"
 	"strings"
 )
@@ -21,45 +20,45 @@ type Operator string
 
 const (
 	// Comparison operators
-	OpEquals              Operator = "="
-	OpNotEquals           Operator = "!="
-	OpLessThan            Operator = "<"
-	OpLessThanOrEqual     Operator = "<="
-	OpGreaterThan         Operator = ">"
-	OpGreaterThanOrEqual  Operator = ">="
-	OpStartsWith          Operator = "STARTSWITH"
-	OpEndsWith            Operator = "ENDSWITH"
-	OpContains            Operator = "CONTAINS"
-	OpDoesNotContain      Operator = "DOESNOTCONTAIN"
-	OpIn                  Operator = "IN"
-	OpNotIn               Operator = "NOT IN"
-	OpIsEmpty             Operator = "ISEMPTY"
-	OpIsNotEmpty          Operator = "ISNOTEMPTY"
-	OpBetween             Operator = "BETWEEN"
-	OpSameAs              Operator = "SAMEAS"
-	OpNotSameAs           Operator = "NSAMEAS"
-	OpLike                Operator = "LIKE"
-	OpNotLike             Operator = "NOTLIKE"
-	
+	OpEquals             Operator = "="
+	OpNotEquals          Operator = "!="
+	OpLessThan           Operator = "<"
+	OpLessThanOrEqual    Operator = "<="
+	OpGreaterThan        Operator = ">"
+	OpGreaterThanOrEqual Operator = ">="
+	OpStartsWith         Operator = "STARTSWITH"
+	OpEndsWith           Operator = "ENDSWITH"
+	OpContains           Operator = "CONTAINS"
+	OpDoesNotContain     Operator = "DOESNOTCONTAIN"
+	OpIn                 Operator = "IN"
+	OpNotIn              Operator = "NOT IN"
+	OpIsEmpty            Operator = "ISEMPTY"
+	OpIsNotEmpty         Operator = "ISNOTEMPTY"
+	OpBetween            Operator = "BETWEEN"
+	OpSameAs             Operator = "SAMEAS"
+	OpNotSameAs          Operator = "NSAMEAS"
+	OpLike               Operator = "LIKE"
+	OpNotLike            Operator = "NOTLIKE"
+
 	// Date/time operators
-	OpOn                  Operator = "ON"
-	OpNotOn               Operator = "NOTON"
-	OpAfter               Operator = ">"
-	OpBefore              Operator = "<"
-	OpToday               Operator = "TODAY"
-	OpYesterday           Operator = "YESTERDAY"
-	OpThisWeek            Operator = "THISWEEK"
-	OpLastWeek            Operator = "LASTWEEK"
-	OpThisMonth           Operator = "THISMONTH"
-	OpLastMonth           Operator = "LASTMONTH"
-	OpThisYear            Operator = "THISYEAR"
-	OpLastYear            Operator = "LASTYEAR"
-	
+	OpOn        Operator = "ON"
+	OpNotOn     Operator = "NOTON"
+	OpAfter     Operator = ">"
+	OpBefore    Operator = "<"
+	OpToday     Operator = "TODAY"
+	OpYesterday Operator = "YESTERDAY"
+	OpThisWeek  Operator = "THISWEEK"
+	OpLastWeek  Operator = "LASTWEEK"
+	OpThisMonth Operator = "THISMONTH"
+	OpLastMonth Operator = "LASTMONTH"
+	OpThisYear  Operator = "THISYEAR"
+	OpLastYear  Operator = "LASTYEAR"
+
 	// Logical operators
-	OpAnd                 Operator = "^"
-	OpOr                  Operator = "^OR"
-	OpNot                 Operator = "^NOT"
-	OpNewQuery            Operator = "^NQ"
+	OpAnd      Operator = "^"
+	OpOr       Operator = "^OR"
+	OpNot      Operator = "^NOT"
+	OpNewQuery Operator = "^NQ"
 )
 
 // OrderDirection represents sort order
@@ -219,41 +218,71 @@ func (q *QueryBuilder) Offset(offset int) *QueryBuilder {
 // Build constructs the final query parameters map
 func (q *QueryBuilder) Build() map[string]string {
 	params := make(map[string]string)
-	
+
 	// Build encoded query
-	if len(q.conditions) > 0 {
-		params["sysparm_query"] = strings.Join(q.conditions, "")
+	if queryStr := q.buildEncodedQuery(); queryStr != "" {
+		params["sysparm_query"] = queryStr
 	}
-	
+
 	// Add fields
 	if len(q.fields) > 0 {
 		params["sysparm_fields"] = strings.Join(q.fields, ",")
 	}
-	
-	// Add ordering
-	if len(q.orderBy) > 0 {
-		params["sysparm_orderby"] = strings.Join(q.orderBy, ",")
-	}
-	
+
 	// Add limit
 	if q.limit > 0 {
 		params["sysparm_limit"] = strconv.Itoa(q.limit)
 	}
-	
+
 	// Add offset
 	if q.offset > 0 {
 		params["sysparm_offset"] = strconv.Itoa(q.offset)
 	}
-	
+
 	return params
 }
 
 // BuildQuery returns just the encoded query string
 func (q *QueryBuilder) BuildQuery() string {
-	if len(q.conditions) == 0 {
-		return ""
+	return q.buildEncodedQuery()
+}
+
+func (q *QueryBuilder) buildEncodedQuery() string {
+	base := strings.Join(q.conditions, "")
+	if len(q.orderBy) == 0 {
+		return base
 	}
-	return strings.Join(q.conditions, "")
+
+	var orderClauses []string
+	for _, order := range q.orderBy {
+		parts := strings.Fields(order)
+		if len(parts) == 0 {
+			continue
+		}
+		field := parts[0]
+		if field == "" {
+			continue
+		}
+
+		direction := ""
+		if len(parts) > 1 {
+			direction = strings.ToUpper(parts[len(parts)-1])
+		}
+
+		if direction == string(OrderDesc) {
+			orderClauses = append(orderClauses, "ORDERBYDESC"+field)
+		} else {
+			orderClauses = append(orderClauses, "ORDERBY"+field)
+		}
+	}
+
+	if len(orderClauses) == 0 {
+		return base
+	}
+	if base == "" {
+		return strings.Join(orderClauses, "^")
+	}
+	return base + "^" + strings.Join(orderClauses, "^")
 }
 
 // Clone creates a copy of the query builder
@@ -265,11 +294,11 @@ func (q *QueryBuilder) Clone() *QueryBuilder {
 		limit:      q.limit,
 		offset:     q.offset,
 	}
-	
+
 	copy(clone.conditions, q.conditions)
 	copy(clone.orderBy, q.orderBy)
 	copy(clone.fields, q.fields)
-	
+
 	return clone
 }
 
@@ -286,27 +315,27 @@ func (q *QueryBuilder) Reset() *QueryBuilder {
 // String returns a human-readable representation of the query
 func (q *QueryBuilder) String() string {
 	var parts []string
-	
+
 	if len(q.conditions) > 0 {
 		parts = append(parts, fmt.Sprintf("WHERE: %s", strings.Join(q.conditions, "")))
 	}
-	
+
 	if len(q.fields) > 0 {
 		parts = append(parts, fmt.Sprintf("FIELDS: %s", strings.Join(q.fields, ", ")))
 	}
-	
+
 	if len(q.orderBy) > 0 {
 		parts = append(parts, fmt.Sprintf("ORDER BY: %s", strings.Join(q.orderBy, ", ")))
 	}
-	
+
 	if q.limit > 0 {
 		parts = append(parts, fmt.Sprintf("LIMIT: %d", q.limit))
 	}
-	
+
 	if q.offset > 0 {
 		parts = append(parts, fmt.Sprintf("OFFSET: %d", q.offset))
 	}
-	
+
 	return strings.Join(parts, " | ")
 }
 
@@ -317,11 +346,10 @@ func formatValue(value interface{}) string {
 	if value == nil {
 		return ""
 	}
-	
+
 	switch v := value.(type) {
 	case string:
-		// URL encode the string value
-		return url.QueryEscape(v)
+		return sanitizeEncodedQueryValue(v)
 	case int, int8, int16, int32, int64:
 		return fmt.Sprintf("%d", v)
 	case uint, uint8, uint16, uint32, uint64:
@@ -334,8 +362,15 @@ func formatValue(value interface{}) string {
 		}
 		return "false"
 	default:
-		return url.QueryEscape(fmt.Sprintf("%v", v))
+		return fmt.Sprintf("%v", v)
 	}
+}
+
+func sanitizeEncodedQueryValue(value string) string {
+	cleaned := strings.ReplaceAll(value, "^", " ")
+	cleaned = strings.ReplaceAll(cleaned, "\n", " ")
+	cleaned = strings.ReplaceAll(cleaned, "\r", " ")
+	return cleaned
 }
 
 // formatValues converts a slice of values to their string representations
@@ -390,7 +425,7 @@ func SearchText(searchTerm string, fields ...string) *QueryBuilder {
 		// Default fields for text search
 		fields = []string{"short_description", "description", "comments"}
 	}
-	
+
 	q := New()
 	for i, field := range fields {
 		if i > 0 {
@@ -398,7 +433,7 @@ func SearchText(searchTerm string, fields ...string) *QueryBuilder {
 		}
 		q.Contains(field, searchTerm)
 	}
-	
+
 	return q
 }
 
@@ -425,11 +460,11 @@ func (qs *QuerySet) Union() *QueryBuilder {
 	if len(qs.queries) == 0 {
 		return New()
 	}
-	
+
 	if len(qs.queries) == 1 {
 		return qs.queries[0].Clone()
 	}
-	
+
 	result := New()
 	for i, query := range qs.queries {
 		if i > 0 {
@@ -437,7 +472,7 @@ func (qs *QuerySet) Union() *QueryBuilder {
 		}
 		result.conditions = append(result.conditions, "("+query.BuildQuery()+")")
 	}
-	
+
 	return result
 }
 
@@ -446,11 +481,11 @@ func (qs *QuerySet) Intersection() *QueryBuilder {
 	if len(qs.queries) == 0 {
 		return New()
 	}
-	
+
 	if len(qs.queries) == 1 {
 		return qs.queries[0].Clone()
 	}
-	
+
 	result := New()
 	for i, query := range qs.queries {
 		if i > 0 {
@@ -458,6 +493,6 @@ func (qs *QuerySet) Intersection() *QueryBuilder {
 		}
 		result.conditions = append(result.conditions, "("+query.BuildQuery()+")")
 	}
-	
+
 	return result
 }

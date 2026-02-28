@@ -33,9 +33,10 @@ const (
 type Logical string
 
 const (
-	And Logical = "^"   // AND
-	Or  Logical = "^OR" // OR
-	NQ  Logical = "^NQ" // NOT (negate query)
+	And      Logical = "^"    // AND
+	Or       Logical = "^OR"  // OR
+	Not      Logical = "^NOT" // NOT
+	NewQuery Logical = "^NQ"  // Start a new query group
 )
 
 // QueryBuilder builds encoded sysparm_query strings
@@ -94,9 +95,9 @@ func (qb *QueryBuilder) Or(field string, op Operator, value interface{}) *QueryB
 	return qb.Add(Or, field, op, value)
 }
 
-// Not is a shortcut for Add with NQ logical (negates the next clause)
+// Not is a shortcut for Add with NOT logical (negates the next clause)
 func (qb *QueryBuilder) Not(field string, op Operator, value interface{}) *QueryBuilder {
-	return qb.Add(NQ, field, op, value)
+	return qb.Add(Not, field, op, value)
 }
 
 // OrderBy adds sorting (asc)

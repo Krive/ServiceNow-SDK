@@ -30,7 +30,7 @@ func (r *RelationshipClient) GetRelationshipsWithContext(ctx context.Context, ci
 	}
 
 	var result core.Response
-	err := r.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/cmdb_rel_ci", nil, params, &result)
+	err := r.client.client.RawRequestWithContext(ctx, "GET", "/table/cmdb_rel_ci", nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get relationships: %w", err)
 	}
@@ -64,7 +64,7 @@ func (r *RelationshipClient) GetParentRelationshipsWithContext(ctx context.Conte
 	}
 
 	var result core.Response
-	err := r.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/cmdb_rel_ci", nil, params, &result)
+	err := r.client.client.RawRequestWithContext(ctx, "GET", "/table/cmdb_rel_ci", nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get parent relationships: %w", err)
 	}
@@ -98,7 +98,7 @@ func (r *RelationshipClient) GetChildRelationshipsWithContext(ctx context.Contex
 	}
 
 	var result core.Response
-	err := r.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/cmdb_rel_ci", nil, params, &result)
+	err := r.client.client.RawRequestWithContext(ctx, "GET", "/table/cmdb_rel_ci", nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get child relationships: %w", err)
 	}
@@ -134,7 +134,7 @@ func (r *RelationshipClient) CreateRelationshipWithContext(ctx context.Context, 
 	}
 
 	var result core.Response
-	err := r.client.client.RawRequestWithContext(ctx, "POST", "/api/now/table/cmdb_rel_ci", relationshipData, nil, &result)
+	err := r.client.client.RawRequestWithContext(ctx, "POST", "/table/cmdb_rel_ci", relationshipData, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create relationship: %w", err)
 	}
@@ -154,7 +154,7 @@ func (r *RelationshipClient) DeleteRelationship(relationshipSysID string) error 
 
 // DeleteRelationshipWithContext removes a relationship with context support
 func (r *RelationshipClient) DeleteRelationshipWithContext(ctx context.Context, relationshipSysID string) error {
-	err := r.client.client.RawRequestWithContext(ctx, "DELETE", fmt.Sprintf("/api/now/table/cmdb_rel_ci/%s", relationshipSysID), nil, nil, nil)
+	err := r.client.client.RawRequestWithContext(ctx, "DELETE", fmt.Sprintf("/table/cmdb_rel_ci/%s", relationshipSysID), nil, nil, nil)
 	if err != nil {
 		return fmt.Errorf("failed to delete relationship: %w", err)
 	}
@@ -183,7 +183,7 @@ func (r *RelationshipClient) GetDependencyMapWithContext(ctx context.Context, ci
 	}
 
 	visited := make(map[string]bool)
-	
+
 	// Build dependency tree recursively
 	err = r.buildDependencyTree(ctx, ciSysID, depMap, visited, depth, true)
 	if err != nil {
@@ -267,7 +267,7 @@ func (r *RelationshipClient) GetRelationshipsByTypeWithContext(ctx context.Conte
 	}
 
 	var result core.Response
-	err := r.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/cmdb_rel_ci", nil, params, &result)
+	err := r.client.client.RawRequestWithContext(ctx, "GET", "/table/cmdb_rel_ci", nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get relationships by type: %w", err)
 	}
@@ -302,7 +302,7 @@ func (r *RelationshipClient) GetRelationshipTypesWithContext(ctx context.Context
 	}
 
 	var result core.Response
-	err := r.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/cmdb_rel_type", nil, params, &result)
+	err := r.client.client.RawRequestWithContext(ctx, "GET", "/table/cmdb_rel_type", nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get relationship types: %w", err)
 	}
@@ -445,7 +445,7 @@ func (r *RelationshipClient) BulkCreateRelationshipsWithContext(ctx context.Cont
 
 	for _, relData := range relationships {
 		var result core.Response
-		err := r.client.client.RawRequestWithContext(ctx, "POST", "/api/now/table/cmdb_rel_ci", relData, nil, &result)
+		err := r.client.client.RawRequestWithContext(ctx, "POST", "/table/cmdb_rel_ci", relData, nil, &result)
 		if err != nil {
 			return createdRelationships, fmt.Errorf("failed to create relationship: %w", err)
 		}

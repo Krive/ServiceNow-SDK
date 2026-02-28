@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Krive/ServiceNow-SDK/pkg/utils/ratelimit"
-	"github.com/Krive/ServiceNow-SDK/pkg/utils/retry"
 	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/aggregate"
 	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/attachment"
 	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/batch"
@@ -15,6 +13,8 @@ import (
 	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/identity"
 	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/importset"
 	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/table"
+	"github.com/Krive/ServiceNow-SDK/pkg/utils/ratelimit"
+	"github.com/Krive/ServiceNow-SDK/pkg/utils/retry"
 )
 
 // Client represents the main ServiceNow SDK client
@@ -26,12 +26,13 @@ type Client struct {
 type Config struct {
 	InstanceURL string
 	// Authentication options (only one should be set)
-	Username     string // For basic auth
-	Password     string // For basic auth
-	ClientID     string // For OAuth
-	ClientSecret string // For OAuth
-	RefreshToken string // For OAuth authorization code flow
-	APIKey       string // For API key auth
+	Username     string            // For basic auth
+	Password     string            // For basic auth
+	ClientID     string            // For OAuth
+	ClientSecret string            // For OAuth
+	RefreshToken string            // For OAuth authorization code flow
+	APIKey       string            // For API key auth
+	TokenStorage core.TokenStorage // Optional OAuth token storage backend
 
 	// Performance and reliability settings
 	Timeout         time.Duration                      // Request timeout
@@ -54,9 +55,20 @@ func NewClient(config Config) (*Client, error) {
 	} else if config.APIKey != "" {
 		coreClient, err = core.NewClientAPIKey(config.InstanceURL, config.APIKey)
 	} else if config.ClientID != "" && config.ClientSecret != "" && config.RefreshToken != "" {
-		coreClient, err = core.NewClientOAuthRefresh(config.InstanceURL, config.ClientID, config.ClientSecret, config.RefreshToken)
+		coreClient, err = core.NewClientOAuthRefreshWithStorage(
+			config.InstanceURL,
+			config.ClientID,
+			config.ClientSecret,
+			config.RefreshToken,
+			config.TokenStorage,
+		)
 	} else if config.ClientID != "" && config.ClientSecret != "" {
-		coreClient, err = core.NewClientOAuth(config.InstanceURL, config.ClientID, config.ClientSecret)
+		coreClient, err = core.NewClientOAuthWithStorage(
+			config.InstanceURL,
+			config.ClientID,
+			config.ClientSecret,
+			config.TokenStorage,
+		)
 	} else {
 		return nil, fmt.Errorf("authentication credentials must be provided: basic auth (username/password), API key, or OAuth (client_id/client_secret)")
 	}

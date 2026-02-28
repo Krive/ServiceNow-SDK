@@ -27,7 +27,7 @@ func (g *GroupClient) GetGroup(sysID string) (*Group, error) {
 // GetGroupWithContext retrieves a group by sys_id with context support
 func (g *GroupClient) GetGroupWithContext(ctx context.Context, sysID string) (*Group, error) {
 	var result core.Response
-	err := g.client.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/api/now/table/sys_user_group/%s", sysID), nil, nil, &result)
+	err := g.client.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/sys_user_group/%s", sysID), nil, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get group: %w", err)
 	}
@@ -53,7 +53,7 @@ func (g *GroupClient) GetGroupByNameWithContext(ctx context.Context, groupName s
 	}
 
 	var result core.Response
-	err := g.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/sys_user_group", nil, params, &result)
+	err := g.client.client.RawRequestWithContext(ctx, "GET", "/table/sys_user_group", nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get group by name: %w", err)
 	}
@@ -85,7 +85,7 @@ func (g *GroupClient) ListGroupsWithContext(ctx context.Context, filter *GroupFi
 	params := g.buildGroupFilterParams(filter)
 
 	var result core.Response
-	err := g.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/sys_user_group", nil, params, &result)
+	err := g.client.client.RawRequestWithContext(ctx, "GET", "/table/sys_user_group", nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list groups: %w", err)
 	}
@@ -115,7 +115,7 @@ func (g *GroupClient) CreateGroup(groupData map[string]interface{}) (*Group, err
 // CreateGroupWithContext creates a new group with context support
 func (g *GroupClient) CreateGroupWithContext(ctx context.Context, groupData map[string]interface{}) (*Group, error) {
 	var result core.Response
-	err := g.client.client.RawRequestWithContext(ctx, "POST", "/api/now/table/sys_user_group", groupData, nil, &result)
+	err := g.client.client.RawRequestWithContext(ctx, "POST", "/table/sys_user_group", groupData, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create group: %w", err)
 	}
@@ -136,7 +136,7 @@ func (g *GroupClient) UpdateGroup(sysID string, updates map[string]interface{}) 
 // UpdateGroupWithContext updates an existing group with context support
 func (g *GroupClient) UpdateGroupWithContext(ctx context.Context, sysID string, updates map[string]interface{}) (*Group, error) {
 	var result core.Response
-	err := g.client.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/api/now/table/sys_user_group/%s", sysID), updates, nil, &result)
+	err := g.client.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/table/sys_user_group/%s", sysID), updates, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update group: %w", err)
 	}
@@ -160,12 +160,12 @@ func (g *GroupClient) DeleteGroupWithContext(ctx context.Context, sysID string) 
 	updates := map[string]interface{}{
 		"active": "false",
 	}
-	
+
 	_, err := g.UpdateGroupWithContext(ctx, sysID, updates)
 	if err != nil {
 		return fmt.Errorf("failed to deactivate group: %w", err)
 	}
-	
+
 	return nil
 }
 
@@ -182,7 +182,7 @@ func (g *GroupClient) AddUserToGroupWithContext(ctx context.Context, userSysID, 
 	}
 
 	var result core.Response
-	err := g.client.client.RawRequestWithContext(ctx, "POST", "/api/now/table/sys_user_grmember", membershipData, nil, &result)
+	err := g.client.client.RawRequestWithContext(ctx, "POST", "/table/sys_user_grmember", membershipData, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to add user to group: %w", err)
 	}
@@ -209,7 +209,7 @@ func (g *GroupClient) RemoveUserFromGroupWithContext(ctx context.Context, userSy
 	}
 
 	var result core.Response
-	err := g.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/sys_user_grmember", nil, params, &result)
+	err := g.client.client.RawRequestWithContext(ctx, "GET", "/table/sys_user_grmember", nil, params, &result)
 	if err != nil {
 		return fmt.Errorf("failed to find group membership: %w", err)
 	}
@@ -234,7 +234,7 @@ func (g *GroupClient) RemoveUserFromGroupWithContext(ctx context.Context, userSy
 	}
 
 	// Delete the membership
-	err = g.client.client.RawRequestWithContext(ctx, "DELETE", fmt.Sprintf("/api/now/table/sys_user_grmember/%s", membershipSysID), nil, nil, nil)
+	err = g.client.client.RawRequestWithContext(ctx, "DELETE", fmt.Sprintf("/table/sys_user_grmember/%s", membershipSysID), nil, nil, nil)
 	if err != nil {
 		return fmt.Errorf("failed to remove group membership: %w", err)
 	}
@@ -254,7 +254,7 @@ func (g *GroupClient) GetGroupMembersWithContext(ctx context.Context, groupSysID
 	}
 
 	var result core.Response
-	err := g.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/sys_user_grmember", nil, params, &result)
+	err := g.client.client.RawRequestWithContext(ctx, "GET", "/table/sys_user_grmember", nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get group members: %w", err)
 	}
@@ -288,7 +288,7 @@ func (g *GroupClient) GetUserGroupsWithContext(ctx context.Context, userSysID st
 	}
 
 	var result core.Response
-	err := g.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/sys_user_grmember", nil, params, &result)
+	err := g.client.client.RawRequestWithContext(ctx, "GET", "/table/sys_user_grmember", nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user groups: %w", err)
 	}
@@ -341,7 +341,7 @@ func (g *GroupClient) buildGroupHierarchy(ctx context.Context, groupSysID string
 	}
 
 	var result core.Response
-	err := g.client.client.RawRequestWithContext(ctx, "GET", "/api/now/table/sys_user_group", nil, params, &result)
+	err := g.client.client.RawRequestWithContext(ctx, "GET", "/table/sys_user_group", nil, params, &result)
 	if err != nil {
 		return fmt.Errorf("failed to get child groups for %s: %w", groupSysID, err)
 	}
@@ -413,13 +413,13 @@ func (g *GroupClient) BulkRemoveUsersFromGroupWithContext(ctx context.Context, u
 // Helper method to build group filter parameters
 func (g *GroupClient) buildGroupFilterParams(filter *GroupFilter) map[string]string {
 	params := make(map[string]string)
-	
+
 	if filter == nil {
 		return params
 	}
 
 	var queryParts []string
-	
+
 	if filter.Active != nil {
 		queryParts = append(queryParts, fmt.Sprintf("active=%t", *filter.Active))
 	}
@@ -449,8 +449,9 @@ func (g *GroupClient) buildGroupFilterParams(filter *GroupFilter) map[string]str
 	if filter.Offset > 0 {
 		params["sysparm_offset"] = fmt.Sprintf("%d", filter.Offset)
 	}
-	if filter.OrderBy != "" {
-		params["sysparm_order"] = filter.OrderBy
+	if orderClause := buildEncodedOrderClause(filter.OrderBy); orderClause != "" {
+		queryParts = append(queryParts, orderClause)
+		params["sysparm_query"] = strings.Join(queryParts, "^")
 	}
 	if len(filter.Fields) > 0 {
 		params["sysparm_fields"] = strings.Join(filter.Fields, ",")
