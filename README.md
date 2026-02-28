@@ -1,4 +1,4 @@
-# ServiceNow SDK (Extracted)
+# ServiceNow SDK
 
 This directory contains the standalone SDK extracted from the toolkit.
 
