@@ -381,7 +381,7 @@ func (i *IdentificationClient) identifyItem(ctx context.Context, item map[string
 	}
 
 	var result core.Response
-	err := i.client.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/%s", className), nil, params, &result)
+	err := i.client.client.RawRequestWithContext(ctx, "GET", buildCMDBTablePath(className), nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to search for CI matches: %w", err)
 	}

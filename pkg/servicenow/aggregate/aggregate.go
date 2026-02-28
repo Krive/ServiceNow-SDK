@@ -3,6 +3,7 @@ package aggregate
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -14,6 +15,10 @@ import (
 type AggregateClient struct {
 	client    *core.Client
 	tableName string
+}
+
+func buildAggregateStatsPath(tableName string) string {
+	return fmt.Sprintf("/stats/%s", url.PathEscape(strings.TrimSpace(tableName)))
 }
 
 // NewAggregateClient creates a new aggregate client for a specific table
@@ -216,7 +221,7 @@ func (aq *AggregateQuery) ExecuteWithContext(ctx context.Context) (*AggregateRes
 	params := aq.BuildParams()
 
 	var result core.Response
-	err := aq.client.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/stats/%s", aq.client.tableName), nil, params, &result)
+	err := aq.client.client.RawRequestWithContext(ctx, "GET", buildAggregateStatsPath(aq.client.tableName), nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("aggregate query failed: %w", err)
 	}
@@ -425,7 +430,7 @@ func (ac *AggregateClient) CountRecordsWithRawQueryContext(ctx context.Context, 
 	}
 
 	var result core.Response
-	err := ac.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/stats/%s", ac.tableName), nil, params, &result)
+	err := ac.client.RawRequestWithContext(ctx, "GET", buildAggregateStatsPath(ac.tableName), nil, params, &result)
 	if err != nil {
 		return 0, fmt.Errorf("aggregate query failed: %w", err)
 	}

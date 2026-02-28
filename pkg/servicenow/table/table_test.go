@@ -41,3 +41,17 @@ func TestParseCountValue(t *testing.T) {
 		t.Fatalf("unexpected fallback count parse: %d", got)
 	}
 }
+
+func TestTablePathBuildersEscapeDynamicSegments(t *testing.T) {
+	if got := buildTablePath("u my/table"); got != "/table/u%20my%2Ftable" {
+		t.Fatalf("unexpected table path: %s", got)
+	}
+
+	if got := buildTableRecordPath("u my/table", "abc/123"); got != "/table/u%20my%2Ftable/abc%2F123" {
+		t.Fatalf("unexpected table record path: %s", got)
+	}
+
+	if got := buildTableStatsPath("u my/table"); got != "/stats/u%20my%2Ftable" {
+		t.Fatalf("unexpected table stats path: %s", got)
+	}
+}

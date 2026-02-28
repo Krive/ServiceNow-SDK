@@ -5,6 +5,8 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/core"
@@ -89,6 +91,10 @@ type BatchBuilder struct {
 	err          error
 }
 
+func escapeBatchPathSegment(value string) string {
+	return url.PathEscape(strings.TrimSpace(value))
+}
+
 // NewBatch creates a new batch builder
 func (bc *BatchClient) NewBatch() *BatchBuilder {
 	return &BatchBuilder{
@@ -140,7 +146,7 @@ func (bb *BatchBuilder) Create(id, tableName string, data map[string]interface{}
 
 	request := RestRequest{
 		ID:                     id,
-		URL:                    fmt.Sprintf("/api/now/table/%s", tableName),
+		URL:                    fmt.Sprintf("/api/now/table/%s", escapeBatchPathSegment(tableName)),
 		Method:                 MethodPOST,
 		ExcludeResponseHeaders: true,
 		Headers: []Header{
@@ -167,7 +173,7 @@ func (bb *BatchBuilder) Update(id, tableName, sysID string, data map[string]inte
 
 	request := RestRequest{
 		ID:                     id,
-		URL:                    fmt.Sprintf("/api/now/table/%s/%s", tableName, sysID),
+		URL:                    fmt.Sprintf("/api/now/table/%s/%s", escapeBatchPathSegment(tableName), escapeBatchPathSegment(sysID)),
 		Method:                 MethodPATCH,
 		ExcludeResponseHeaders: true,
 		Headers: []Header{
@@ -194,7 +200,7 @@ func (bb *BatchBuilder) Replace(id, tableName, sysID string, data map[string]int
 
 	request := RestRequest{
 		ID:                     id,
-		URL:                    fmt.Sprintf("/api/now/table/%s/%s", tableName, sysID),
+		URL:                    fmt.Sprintf("/api/now/table/%s/%s", escapeBatchPathSegment(tableName), escapeBatchPathSegment(sysID)),
 		Method:                 MethodPUT,
 		ExcludeResponseHeaders: true,
 		Headers: []Header{
@@ -211,7 +217,7 @@ func (bb *BatchBuilder) Replace(id, tableName, sysID string, data map[string]int
 func (bb *BatchBuilder) Delete(id, tableName, sysID string) *BatchBuilder {
 	request := RestRequest{
 		ID:                     id,
-		URL:                    fmt.Sprintf("/api/now/table/%s/%s", tableName, sysID),
+		URL:                    fmt.Sprintf("/api/now/table/%s/%s", escapeBatchPathSegment(tableName), escapeBatchPathSegment(sysID)),
 		Method:                 MethodDELETE,
 		ExcludeResponseHeaders: true,
 	}
@@ -437,7 +443,7 @@ func (bc *BatchClient) GetMultipleWithContext(ctx context.Context, tableName str
 
 	for i, sysID := range sysIDs {
 		id := fmt.Sprintf("get_%d", i+1)
-		url := fmt.Sprintf("/api/now/table/%s/%s", tableName, sysID)
+		url := fmt.Sprintf("/api/now/table/%s/%s", escapeBatchPathSegment(tableName), escapeBatchPathSegment(sysID))
 		batch.Get(id, url)
 	}
 
@@ -507,7 +513,7 @@ func (bc *BatchClient) ExecuteMixedWithContext(ctx context.Context, operations M
 
 	// Add get operations
 	for _, op := range operations.Gets {
-		url := fmt.Sprintf("/api/now/table/%s/%s", op.TableName, op.SysID)
+		url := fmt.Sprintf("/api/now/table/%s/%s", escapeBatchPathSegment(op.TableName), escapeBatchPathSegment(op.SysID))
 		batch.Get(op.ID, url)
 	}
 

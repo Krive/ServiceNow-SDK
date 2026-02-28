@@ -3,6 +3,8 @@ package cmdb
 import (
 	"context"
 	"fmt"
+	"net/url"
+	"strings"
 	"time"
 
 	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/core"
@@ -158,7 +160,14 @@ func (r *RelationshipClient) DeleteRelationship(relationshipSysID string) error 
 
 // DeleteRelationshipWithContext removes a relationship with context support
 func (r *RelationshipClient) DeleteRelationshipWithContext(ctx context.Context, relationshipSysID string) error {
-	err := r.client.client.RawRequestWithContext(ctx, "DELETE", fmt.Sprintf("/table/cmdb_rel_ci/%s", relationshipSysID), nil, nil, nil)
+	err := r.client.client.RawRequestWithContext(
+		ctx,
+		"DELETE",
+		fmt.Sprintf("/table/cmdb_rel_ci/%s", url.PathEscape(strings.TrimSpace(relationshipSysID))),
+		nil,
+		nil,
+		nil,
+	)
 	if err != nil {
 		return fmt.Errorf("failed to delete relationship: %w", err)
 	}

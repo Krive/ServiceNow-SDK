@@ -27,7 +27,7 @@ func (r *RoleClient) GetRole(sysID string) (*Role, error) {
 // GetRoleWithContext retrieves a role by sys_id with context support
 func (r *RoleClient) GetRoleWithContext(ctx context.Context, sysID string) (*Role, error) {
 	var result core.Response
-	err := r.client.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/sys_user_role/%s", sysID), nil, nil, &result)
+	err := r.client.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/sys_user_role/%s", escapeIdentityPathSegment(sysID)), nil, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get role: %w", err)
 	}
@@ -136,7 +136,7 @@ func (r *RoleClient) UpdateRole(sysID string, updates map[string]interface{}) (*
 // UpdateRoleWithContext updates an existing role with context support
 func (r *RoleClient) UpdateRoleWithContext(ctx context.Context, sysID string, updates map[string]interface{}) (*Role, error) {
 	var result core.Response
-	err := r.client.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/table/sys_user_role/%s", sysID), updates, nil, &result)
+	err := r.client.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/table/sys_user_role/%s", escapeIdentityPathSegment(sysID)), updates, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update role: %w", err)
 	}
@@ -158,7 +158,7 @@ func (r *RoleClient) DeleteRole(sysID string) error {
 func (r *RoleClient) DeleteRoleWithContext(ctx context.Context, sysID string) error {
 	// In ServiceNow, we typically deactivate roles rather than delete them
 	updates := map[string]interface{}{
-		"active": "false",
+		"active": false,
 	}
 
 	_, err := r.UpdateRoleWithContext(ctx, sysID, updates)
@@ -238,7 +238,7 @@ func (r *RoleClient) RemoveRoleFromUserWithContext(ctx context.Context, userSysI
 	}
 
 	// Delete the assignment
-	err = r.client.client.RawRequestWithContext(ctx, "DELETE", fmt.Sprintf("/table/sys_user_has_role/%s", assignmentSysID), nil, nil, nil)
+	err = r.client.client.RawRequestWithContext(ctx, "DELETE", fmt.Sprintf("/table/sys_user_has_role/%s", escapeIdentityPathSegment(assignmentSysID)), nil, nil, nil)
 	if err != nil {
 		return fmt.Errorf("failed to remove role assignment: %w", err)
 	}

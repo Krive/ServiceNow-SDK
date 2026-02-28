@@ -27,7 +27,7 @@ func (g *GroupClient) GetGroup(sysID string) (*Group, error) {
 // GetGroupWithContext retrieves a group by sys_id with context support
 func (g *GroupClient) GetGroupWithContext(ctx context.Context, sysID string) (*Group, error) {
 	var result core.Response
-	err := g.client.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/sys_user_group/%s", sysID), nil, nil, &result)
+	err := g.client.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/sys_user_group/%s", escapeIdentityPathSegment(sysID)), nil, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get group: %w", err)
 	}
@@ -136,7 +136,7 @@ func (g *GroupClient) UpdateGroup(sysID string, updates map[string]interface{}) 
 // UpdateGroupWithContext updates an existing group with context support
 func (g *GroupClient) UpdateGroupWithContext(ctx context.Context, sysID string, updates map[string]interface{}) (*Group, error) {
 	var result core.Response
-	err := g.client.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/table/sys_user_group/%s", sysID), updates, nil, &result)
+	err := g.client.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/table/sys_user_group/%s", escapeIdentityPathSegment(sysID)), updates, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update group: %w", err)
 	}
@@ -158,7 +158,7 @@ func (g *GroupClient) DeleteGroup(sysID string) error {
 func (g *GroupClient) DeleteGroupWithContext(ctx context.Context, sysID string) error {
 	// In ServiceNow, we typically deactivate groups rather than delete them
 	updates := map[string]interface{}{
-		"active": "false",
+		"active": false,
 	}
 
 	_, err := g.UpdateGroupWithContext(ctx, sysID, updates)
@@ -238,7 +238,7 @@ func (g *GroupClient) RemoveUserFromGroupWithContext(ctx context.Context, userSy
 	}
 
 	// Delete the membership
-	err = g.client.client.RawRequestWithContext(ctx, "DELETE", fmt.Sprintf("/table/sys_user_grmember/%s", membershipSysID), nil, nil, nil)
+	err = g.client.client.RawRequestWithContext(ctx, "DELETE", fmt.Sprintf("/table/sys_user_grmember/%s", escapeIdentityPathSegment(membershipSysID)), nil, nil, nil)
 	if err != nil {
 		return fmt.Errorf("failed to remove group membership: %w", err)
 	}

@@ -3,6 +3,7 @@ package catalog
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -149,7 +150,7 @@ func (cc *CatalogClient) GetCatalog(sysID string) (*Catalog, error) {
 // GetCatalogWithContext returns a specific catalog by sys_id with context support
 func (cc *CatalogClient) GetCatalogWithContext(ctx context.Context, sysID string) (*Catalog, error) {
 	var response core.Response
-	err := cc.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/sc_catalog/%s", sysID), nil, nil, &response)
+	err := cc.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/sc_catalog/%s", escapeCatalogPathSegment(sysID)), nil, nil, &response)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get catalog: %w", err)
 	}
@@ -274,7 +275,7 @@ func (cc *CatalogClient) GetCategory(sysID string) (*Category, error) {
 // GetCategoryWithContext returns a specific category by sys_id with context support
 func (cc *CatalogClient) GetCategoryWithContext(ctx context.Context, sysID string) (*Category, error) {
 	var response core.Response
-	err := cc.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/sc_cat_item_category/%s", sysID), nil, nil, &response)
+	err := cc.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/sc_cat_item_category/%s", escapeCatalogPathSegment(sysID)), nil, nil, &response)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get category: %w", err)
 	}
@@ -359,6 +360,10 @@ func sanitizeQueryTerm(value string) string {
 	cleaned = strings.ReplaceAll(cleaned, "\n", " ")
 	cleaned = strings.ReplaceAll(cleaned, "\r", " ")
 	return cleaned
+}
+
+func escapeCatalogPathSegment(value string) string {
+	return url.PathEscape(strings.TrimSpace(value))
 }
 
 func getBool(value interface{}) bool {

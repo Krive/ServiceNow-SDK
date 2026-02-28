@@ -24,12 +24,18 @@ type Client struct {
 	rateLimiter *ratelimit.ServiceNowLimiter
 	retryConfig retry.Config
 	timeout     time.Duration
+	// allowCrossHostRootRequests permits absolute RawRootRequest URLs to different hosts.
+	// Keep disabled unless explicitly needed.
+	allowCrossHostRootRequests bool
 }
 
 // ClientOptions controls client security/transport behavior.
 type ClientOptions struct {
 	// AllowInsecureHTTP permits plain HTTP instance URLs. Keep disabled in production.
 	AllowInsecureHTTP bool
+	// AllowCrossHostRootRequests permits absolute RawRootRequest URLs targeting hosts
+	// other than InstanceURL. Keep disabled in production.
+	AllowCrossHostRootRequests bool
 }
 
 func NewClientBasicAuth(instanceURL, username, password string) (*Client, error) {
@@ -96,6 +102,14 @@ func newClientWithOptions(instanceURL string, auth AuthProvider, options ClientO
 		return nil, err
 	}
 
+	// Ensure OAuth token refresh/token exchange uses normalized instance URL.
+	switch typed := auth.(type) {
+	case *OAuthClientCredentials:
+		typed.instanceURL = normalizedURL
+	case *OAuthAuthorizationCode:
+		typed.instanceURL = normalizedURL
+	}
+
 	c := resty.New()
 	c.SetBaseURL(normalizedURL + "/api/now")
 	c.SetHeader("Accept", "application/json")
@@ -113,13 +127,14 @@ func newClientWithOptions(instanceURL string, auth AuthProvider, options ClientO
 	retryConfig := retry.ServiceNowRetryConfig()
 
 	return &Client{
-		InstanceURL: normalizedURL,
-		BaseURL:     normalizedURL + "/api/now",
-		Client:      c,
-		Auth:        auth,
-		rateLimiter: rateLimiter,
-		retryConfig: retryConfig,
-		timeout:     30 * time.Second,
+		InstanceURL:                normalizedURL,
+		BaseURL:                    normalizedURL + "/api/now",
+		Client:                     c,
+		Auth:                       auth,
+		rateLimiter:                rateLimiter,
+		retryConfig:                retryConfig,
+		timeout:                    30 * time.Second,
+		allowCrossHostRootRequests: options.AllowCrossHostRootRequests,
 	}, nil
 }
 
@@ -263,15 +278,76 @@ func (c *Client) executeRootRequest(ctx context.Context, method, path string, bo
 	for k, v := range params {
 		req.SetQueryParam(k, v)
 	}
-	requestURL := path
+	requestURL, err := c.resolveRootRequestURL(path)
+	if err != nil {
+		return err
+	}
+	resp, err := req.Execute(method, requestURL)
+	return c.HandleResponse(resp, err, result, format)
+}
+
+func (c *Client) resolveRootRequestURL(path string) (string, error) {
 	if !strings.HasPrefix(path, "http://") && !strings.HasPrefix(path, "https://") {
 		if !strings.HasPrefix(path, "/") {
 			path = "/" + path
 		}
-		requestURL = c.InstanceURL + path
+		return c.InstanceURL + path, nil
 	}
-	resp, err := req.Execute(method, requestURL)
-	return c.HandleResponse(resp, err, result, format)
+
+	parsed, err := url.Parse(path)
+	if err != nil {
+		return "", fmt.Errorf("invalid absolute root request URL %q: %w", path, err)
+	}
+
+	if c.allowCrossHostRootRequests {
+		return path, nil
+	}
+
+	instanceParsed, err := url.Parse(c.InstanceURL)
+	if err != nil {
+		return "", fmt.Errorf("invalid client instance URL %q: %w", c.InstanceURL, err)
+	}
+
+	if !sameHostAndPort(instanceParsed, parsed) {
+		return "", fmt.Errorf(
+			"cross-host raw root request blocked: instance host %q does not match request host %q",
+			instanceParsed.Host,
+			parsed.Host,
+		)
+	}
+
+	return path, nil
+}
+
+func sameHostAndPort(a, b *url.URL) bool {
+	hostA := strings.ToLower(a.Hostname())
+	hostB := strings.ToLower(b.Hostname())
+	if hostA != hostB {
+		return false
+	}
+
+	portA := a.Port()
+	if portA == "" {
+		portA = defaultPortForScheme(a.Scheme)
+	}
+
+	portB := b.Port()
+	if portB == "" {
+		portB = defaultPortForScheme(b.Scheme)
+	}
+
+	return portA == portB
+}
+
+func defaultPortForScheme(scheme string) string {
+	switch strings.ToLower(scheme) {
+	case "https":
+		return "443"
+	case "http":
+		return "80"
+	default:
+		return ""
+	}
 }
 
 // UploadFileWithContext uploads a file via multipart form data with auth, rate limiting and retry.

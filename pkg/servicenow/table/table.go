@@ -3,6 +3,7 @@ package table
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strconv"
 	"strings"
 
@@ -19,6 +20,22 @@ func NewTableClient(client *core.Client, name string) *TableClient {
 	return &TableClient{client: client, name: name}
 }
 
+func buildTablePath(tableName string) string {
+	return fmt.Sprintf("/table/%s", url.PathEscape(strings.TrimSpace(tableName)))
+}
+
+func buildTableRecordPath(tableName, sysID string) string {
+	return fmt.Sprintf(
+		"/table/%s/%s",
+		url.PathEscape(strings.TrimSpace(tableName)),
+		url.PathEscape(strings.TrimSpace(sysID)),
+	)
+}
+
+func buildTableStatsPath(tableName string) string {
+	return fmt.Sprintf("/stats/%s", url.PathEscape(strings.TrimSpace(tableName)))
+}
+
 // List retrieves records from the table
 func (t *TableClient) List(params map[string]string) ([]map[string]interface{}, error) {
 	return t.ListWithContext(context.Background(), params)
@@ -27,7 +44,7 @@ func (t *TableClient) List(params map[string]string) ([]map[string]interface{}, 
 // ListWithContext retrieves records from the table with context support
 func (t *TableClient) ListWithContext(ctx context.Context, params map[string]string) ([]map[string]interface{}, error) {
 	var result core.Response
-	err := t.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/%s", t.name), nil, params, &result)
+	err := t.client.RawRequestWithContext(ctx, "GET", buildTablePath(t.name), nil, params, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -54,7 +71,7 @@ func (t *TableClient) Get(sysID string) (map[string]interface{}, error) {
 // GetWithContext retrieves a single record by sys_id with context support
 func (t *TableClient) GetWithContext(ctx context.Context, sysID string) (map[string]interface{}, error) {
 	var result core.Response
-	err := t.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/%s/%s", t.name, sysID), nil, nil, &result)
+	err := t.client.RawRequestWithContext(ctx, "GET", buildTableRecordPath(t.name, sysID), nil, nil, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -73,7 +90,7 @@ func (t *TableClient) Create(record map[string]interface{}) (map[string]interfac
 // CreateWithContext inserts a new record using POST with context support
 func (t *TableClient) CreateWithContext(ctx context.Context, record map[string]interface{}) (map[string]interface{}, error) {
 	var result core.Response
-	err := t.client.RawRequestWithContext(ctx, "POST", fmt.Sprintf("/table/%s", t.name), record, nil, &result)
+	err := t.client.RawRequestWithContext(ctx, "POST", buildTablePath(t.name), record, nil, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -92,7 +109,7 @@ func (t *TableClient) Update(sysID string, record map[string]interface{}) (map[s
 // UpdateWithContext performs a partial update using PATCH with context support
 func (t *TableClient) UpdateWithContext(ctx context.Context, sysID string, record map[string]interface{}) (map[string]interface{}, error) {
 	var result core.Response
-	err := t.client.RawRequestWithContext(ctx, "PATCH", fmt.Sprintf("/table/%s/%s", t.name, sysID), record, nil, &result)
+	err := t.client.RawRequestWithContext(ctx, "PATCH", buildTableRecordPath(t.name, sysID), record, nil, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -106,7 +123,7 @@ func (t *TableClient) UpdateWithContext(ctx context.Context, sysID string, recor
 // Put performs a full replace using PUT (use sparingly, as PATCH is preferred)
 func (t *TableClient) Put(sysID string, record map[string]interface{}) (map[string]interface{}, error) {
 	var result core.Response
-	err := t.client.RawRequest("PUT", fmt.Sprintf("/table/%s/%s", t.name, sysID), record, nil, &result)
+	err := t.client.RawRequest("PUT", buildTableRecordPath(t.name, sysID), record, nil, &result)
 	if err != nil {
 		return nil, err
 	}
@@ -124,7 +141,7 @@ func (t *TableClient) Delete(sysID string) error {
 
 // DeleteWithContext removes a record using DELETE with context support
 func (t *TableClient) DeleteWithContext(ctx context.Context, sysID string) error {
-	return t.client.RawRequestWithContext(ctx, "DELETE", fmt.Sprintf("/table/%s/%s", t.name, sysID), nil, nil, nil)
+	return t.client.RawRequestWithContext(ctx, "DELETE", buildTableRecordPath(t.name, sysID), nil, nil, nil)
 }
 
 // Query returns a new QueryBuilder for this table
@@ -276,7 +293,7 @@ func (tq *TableQuery) CountWithContext(ctx context.Context) (int, error) {
 	}
 
 	var result core.Response
-	err := tq.table.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/stats/%s", tq.table.name), nil, params, &result)
+	err := tq.table.client.RawRequestWithContext(ctx, "GET", buildTableStatsPath(tq.table.name), nil, params, &result)
 	if err != nil {
 		return 0, err
 	}
@@ -446,7 +463,7 @@ func (t *TableClient) GetKeys(query string) ([]string, error) {
 		params["sysparm_offset"] = strconv.Itoa(offset)
 
 		var result core.Response
-		err := t.client.RawRequest("GET", fmt.Sprintf("/table/%s", t.name), nil, params, &result)
+		err := t.client.RawRequest("GET", buildTablePath(t.name), nil, params, &result)
 		if err != nil {
 			return nil, err
 		}

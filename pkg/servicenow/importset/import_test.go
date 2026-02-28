@@ -2,6 +2,8 @@ package importset
 
 import (
 	"testing"
+
+	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/core"
 )
 
 func TestNormalizeImportRecord(t *testing.T) {
@@ -37,6 +39,38 @@ func TestBuildImportSetLookupPathEscapesSysID(t *testing.T) {
 	want := "/table/sys_import_set/abc%2F123%3Fx=1"
 	if got != want {
 		t.Fatalf("unexpected lookup path: got %q want %q", got, want)
+	}
+}
+
+func TestBuildImportInsertPathEscapesTableName(t *testing.T) {
+	got := buildImportInsertPath("u data/table")
+	want := "/import/u%20data%2Ftable"
+	if got != want {
+		t.Fatalf("unexpected insert path: got %q want %q", got, want)
+	}
+
+	gotV1 := buildImportInsertV1Path("u data/table")
+	wantV1 := "/v1/import/u%20data%2Ftable"
+	if gotV1 != wantV1 {
+		t.Fatalf("unexpected v1 insert path: got %q want %q", gotV1, wantV1)
+	}
+}
+
+func TestShouldRetryWithV1ImportPath(t *testing.T) {
+	if shouldRetryWithV1ImportPath(nil) {
+		t.Fatalf("nil error should not trigger fallback")
+	}
+
+	if !shouldRetryWithV1ImportPath(core.NewServiceNowError(404, "not found")) {
+		t.Fatalf("404 should trigger fallback")
+	}
+
+	if !shouldRetryWithV1ImportPath(core.NewServiceNowError(405, "method not allowed")) {
+		t.Fatalf("405 should trigger fallback")
+	}
+
+	if shouldRetryWithV1ImportPath(core.NewServiceNowError(400, "bad request")) {
+		t.Fatalf("400 should not trigger fallback")
 	}
 }
 

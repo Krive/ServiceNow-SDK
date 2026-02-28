@@ -28,6 +28,9 @@ type Config struct {
 	// AllowInsecureHTTP permits plain HTTP instance URLs for local/test environments.
 	// Keep false in production.
 	AllowInsecureHTTP bool
+	// AllowCrossHostRootRequests permits RawRootRequest absolute URLs to hosts
+	// other than InstanceURL. Keep false unless explicitly required.
+	AllowCrossHostRootRequests bool
 	// Authentication options (only one should be set)
 	Username     string            // For basic auth
 	Password     string            // For basic auth
@@ -52,7 +55,8 @@ func NewClient(config Config) (*Client, error) {
 	var coreClient *core.Client
 	var err error
 	clientOptions := core.ClientOptions{
-		AllowInsecureHTTP: config.AllowInsecureHTTP,
+		AllowInsecureHTTP:          config.AllowInsecureHTTP,
+		AllowCrossHostRootRequests: config.AllowCrossHostRootRequests,
 	}
 
 	// Determine auth method based on provided credentials

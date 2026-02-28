@@ -3,6 +3,7 @@ package ratelimit
 import (
 	"context"
 	"fmt"
+	"strings"
 	"sync"
 	"time"
 
@@ -75,7 +76,7 @@ type ServiceNowLimiter struct {
 	attachmentLimiter Limiter
 	importLimiter     Limiter
 	defaultLimiter    Limiter
-	
+
 	mu sync.RWMutex
 }
 
@@ -86,7 +87,7 @@ type ServiceNowLimiterConfig struct {
 	AttachmentRequestsPerSecond float64
 	ImportRequestsPerSecond     float64
 	DefaultRequestsPerSecond    float64
-	
+
 	// Burst allowances
 	TableBurst      int
 	AttachmentBurst int
@@ -99,11 +100,11 @@ type ServiceNowLimiterConfig struct {
 func DefaultServiceNowConfig() ServiceNowLimiterConfig {
 	return ServiceNowLimiterConfig{
 		// Conservative defaults based on ServiceNow limits
-		TableRequestsPerSecond:      5.0,  // 5 requests per second for table operations
-		AttachmentRequestsPerSecond: 2.0,  // 2 requests per second for attachments (larger payloads)
-		ImportRequestsPerSecond:     1.0,  // 1 request per second for imports (heavy operations)
-		DefaultRequestsPerSecond:    3.0,  // 3 requests per second for other operations
-		
+		TableRequestsPerSecond:      5.0, // 5 requests per second for table operations
+		AttachmentRequestsPerSecond: 2.0, // 2 requests per second for attachments (larger payloads)
+		ImportRequestsPerSecond:     1.0, // 1 request per second for imports (heavy operations)
+		DefaultRequestsPerSecond:    3.0, // 3 requests per second for other operations
+
 		// Burst allowances
 		TableBurst:      10,
 		AttachmentBurst: 5,
@@ -154,7 +155,7 @@ func (s *ServiceNowLimiter) Reserve(endpointType EndpointType) Reservation {
 func (s *ServiceNowLimiter) getLimiter(endpointType EndpointType) Limiter {
 	s.mu.RLock()
 	defer s.mu.RUnlock()
-	
+
 	switch endpointType {
 	case EndpointTypeTable:
 		return s.tableLimiter
@@ -171,7 +172,7 @@ func (s *ServiceNowLimiter) getLimiter(endpointType EndpointType) Limiter {
 func (s *ServiceNowLimiter) UpdateConfig(config ServiceNowLimiterConfig) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	
+
 	s.tableLimiter = NewTokenBucketLimiter(config.TableRequestsPerSecond, config.TableBurst)
 	s.attachmentLimiter = NewTokenBucketLimiter(config.AttachmentRequestsPerSecond, config.AttachmentBurst)
 	s.importLimiter = NewTokenBucketLimiter(config.ImportRequestsPerSecond, config.ImportBurst)
@@ -181,39 +182,20 @@ func (s *ServiceNowLimiter) UpdateConfig(config ServiceNowLimiterConfig) {
 // DetectEndpointType attempts to determine the endpoint type from a URL path
 func DetectEndpointType(path string) EndpointType {
 	switch {
-	case contains(path, "/table/") || contains(path, "/now/table/"):
+	case strings.Contains(path, "/table/") || strings.Contains(path, "/now/table/"):
 		return EndpointTypeTable
-	case contains(path, "/attachment") || contains(path, "/now/attachment"):
+	case strings.Contains(path, "/attachment") || strings.Contains(path, "/now/attachment"):
 		return EndpointTypeAttachment
-	case contains(path, "/import") || contains(path, "/now/import"):
+	case strings.Contains(path, "/import") || strings.Contains(path, "/now/import"):
 		return EndpointTypeImport
 	default:
 		return EndpointTypeDefault
 	}
 }
 
-// contains checks if a string contains a substring
-func contains(s, substr string) bool {
-	return len(s) >= len(substr) && (s == substr || 
-		(len(s) > len(substr) && 
-			(s[:len(substr)] == substr || 
-			 s[len(s)-len(substr):] == substr ||
-			 indexOf(s, substr) >= 0)))
-}
-
-// indexOf returns the index of substr in s, or -1 if not found
-func indexOf(s, substr string) int {
-	for i := 0; i <= len(s)-len(substr); i++ {
-		if s[i:i+len(substr)] == substr {
-			return i
-		}
-	}
-	return -1
-}
-
 // RateLimitError represents a rate limit exceeded error
 type RateLimitError struct {
-	Message   string
+	Message    string
 	RetryAfter time.Duration
 }
 
@@ -224,7 +206,7 @@ func (e *RateLimitError) Error() string {
 // NewRateLimitError creates a new rate limit error
 func NewRateLimitError(message string, retryAfter time.Duration) *RateLimitError {
 	return &RateLimitError{
-		Message:   message,
+		Message:    message,
 		RetryAfter: retryAfter,
 	}
 }

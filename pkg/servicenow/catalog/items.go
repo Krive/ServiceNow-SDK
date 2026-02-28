@@ -84,7 +84,7 @@ func (cc *CatalogClient) GetItem(sysID string) (*CatalogItem, error) {
 // GetItemWithContext returns a specific catalog item by sys_id with context support
 func (cc *CatalogClient) GetItemWithContext(ctx context.Context, sysID string) (*CatalogItem, error) {
 	var response core.Response
-	err := cc.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/sc_cat_item/%s", sysID), nil, nil, &response)
+	err := cc.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/sc_cat_item/%s", escapeCatalogPathSegment(sysID)), nil, nil, &response)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get catalog item: %w", err)
 	}

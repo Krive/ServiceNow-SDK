@@ -19,29 +19,43 @@ func (i *IdentityClient) NewAccessClient() *AccessClient {
 }
 
 // CheckAccess performs a heuristic role-based access check.
-// It does not evaluate full ServiceNow ACL logic or script conditions.
+// Deprecated: use CheckAccessHeuristic to make non-authoritative behavior explicit.
 func (a *AccessClient) CheckAccess(request *AccessCheckRequest) (*AccessCheckResult, error) {
-	return a.CheckAccessWithContext(context.Background(), request)
+	return a.CheckAccessHeuristicWithContext(context.Background(), request)
 }
 
 // CheckAccessWithContext performs a heuristic role-based access check with context support.
-// It does not evaluate full ServiceNow ACL logic or script conditions.
+// Deprecated: use CheckAccessHeuristicWithContext to make non-authoritative behavior explicit.
 func (a *AccessClient) CheckAccessWithContext(ctx context.Context, request *AccessCheckRequest) (*AccessCheckResult, error) {
+	return a.CheckAccessHeuristicWithContext(ctx, request)
+}
+
+// CheckAccessHeuristic performs a heuristic role-based access check.
+// It does not evaluate full ServiceNow ACL logic or script conditions.
+func (a *AccessClient) CheckAccessHeuristic(request *AccessCheckRequest) (*AccessCheckResult, error) {
+	return a.CheckAccessHeuristicWithContext(context.Background(), request)
+}
+
+// CheckAccessHeuristicWithContext performs a heuristic role-based access check with context support.
+// It does not evaluate full ServiceNow ACL logic or script conditions.
+func (a *AccessClient) CheckAccessHeuristicWithContext(ctx context.Context, request *AccessCheckRequest) (*AccessCheckResult, error) {
 	// This would typically use ServiceNow's Access Control API or script includes
 	// For now, we'll implement a basic check using role assignments
 
 	user, err := a.client.GetUserWithContext(ctx, request.UserSysID)
 	if err != nil {
 		return &AccessCheckResult{
-			HasAccess: false,
-			Reason:    fmt.Sprintf("User not found: %s", err.Error()),
+			HasAccess:     false,
+			Authoritative: false,
+			Reason:        fmt.Sprintf("User not found: %s", err.Error()),
 		}, nil
 	}
 
 	if !user.Active {
 		return &AccessCheckResult{
-			HasAccess: false,
-			Reason:    "User is inactive",
+			HasAccess:     false,
+			Authoritative: false,
+			Reason:        "User is inactive",
 		}, nil
 	}
 
@@ -50,8 +64,9 @@ func (a *AccessClient) CheckAccessWithContext(ctx context.Context, request *Acce
 	userRoles, err := roleClient.GetUserRolesWithContext(ctx, request.UserSysID)
 	if err != nil {
 		return &AccessCheckResult{
-			HasAccess: false,
-			Reason:    fmt.Sprintf("Failed to get user roles: %s", err.Error()),
+			HasAccess:     false,
+			Authoritative: false,
+			Reason:        fmt.Sprintf("Failed to get user roles: %s", err.Error()),
 		}, nil
 	}
 
@@ -64,9 +79,10 @@ func (a *AccessClient) CheckAccessWithContext(ctx context.Context, request *Acce
 
 		if role.Name == "admin" || role.GrantsAdmin {
 			return &AccessCheckResult{
-				HasAccess: true,
-				GrantedBy: "heuristic role check: admin role",
-				Reason:    "heuristic check only; this is not authoritative ACL evaluation",
+				HasAccess:     true,
+				Authoritative: false,
+				GrantedBy:     "heuristic role check: admin role",
+				Reason:        "heuristic check only; this is not authoritative ACL evaluation",
 			}, nil
 		}
 	}
@@ -83,9 +99,10 @@ func (a *AccessClient) CheckAccessWithContext(ctx context.Context, request *Acce
 			for _, requiredRole := range tableRoles {
 				if role.Name == requiredRole {
 					return &AccessCheckResult{
-						HasAccess: true,
-						GrantedBy: fmt.Sprintf("heuristic role check: %s", role.Name),
-						Reason:    "heuristic check only; this is not authoritative ACL evaluation",
+						HasAccess:     true,
+						Authoritative: false,
+						GrantedBy:     fmt.Sprintf("heuristic role check: %s", role.Name),
+						Reason:        "heuristic check only; this is not authoritative ACL evaluation",
 					}, nil
 				}
 			}
@@ -93,14 +110,16 @@ func (a *AccessClient) CheckAccessWithContext(ctx context.Context, request *Acce
 
 		return &AccessCheckResult{
 			HasAccess:     false,
+			Authoritative: false,
 			Reason:        fmt.Sprintf("User lacks required role for %s on %s", request.Operation, request.Table),
 			RequiredRoles: tableRoles,
 		}, nil
 	}
 
 	return &AccessCheckResult{
-		HasAccess: true,
-		Reason:    "heuristic check only; default access granted (non-authoritative)",
+		HasAccess:     true,
+		Authoritative: false,
+		Reason:        "heuristic check only; default access granted (non-authoritative)",
 	}, nil
 }
 
@@ -276,7 +295,7 @@ func (a *AccessClient) SetUserPreferenceWithContext(ctx context.Context, userSys
 			}
 
 			var result core.Response
-			err := a.client.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/table/sys_user_preference/%s", pref.SysID), updates, nil, &result)
+			err := a.client.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/table/sys_user_preference/%s", escapeIdentityPathSegment(pref.SysID)), updates, nil, &result)
 			if err != nil {
 				return nil, fmt.Errorf("failed to update user preference: %w", err)
 			}
@@ -355,7 +374,7 @@ func (a *AccessClient) DeleteUserPreferenceWithContext(ctx context.Context, user
 	}
 
 	// Delete the preference
-	err = a.client.client.RawRequestWithContext(ctx, "DELETE", fmt.Sprintf("/table/sys_user_preference/%s", prefSysID), nil, nil, nil)
+	err = a.client.client.RawRequestWithContext(ctx, "DELETE", fmt.Sprintf("/table/sys_user_preference/%s", escapeIdentityPathSegment(prefSysID)), nil, nil, nil)
 	if err != nil {
 		return fmt.Errorf("failed to delete user preference: %w", err)
 	}
@@ -380,10 +399,10 @@ func (a *AccessClient) InvalidateUserSessionsWithContext(ctx context.Context, us
 	for _, session := range sessions {
 		if session.Active {
 			updates := map[string]interface{}{
-				"active": "false",
+				"active": false,
 			}
 
-			err := a.client.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/table/sys_user_session/%s", session.SysID), updates, nil, nil)
+			err := a.client.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/table/sys_user_session/%s", escapeIdentityPathSegment(session.SysID)), updates, nil, nil)
 			if err != nil {
 				// Continue with other sessions if one fails
 				continue

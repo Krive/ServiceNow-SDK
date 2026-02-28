@@ -45,7 +45,7 @@ func (i *ImportSetClient) InsertWithContext(ctx context.Context, tableName strin
 	if len(records) == 1 {
 		normalizedRecord := normalizeImportRecord(records[0])
 		var result core.Response
-		err := i.client.RawRequestWithContext(ctx, "POST", fmt.Sprintf("/import/%s", tableName), normalizedRecord, nil, &result)
+		err := i.insertRecordWithVersionFallback(ctx, tableName, normalizedRecord, &result)
 		if err != nil {
 			return nil, fmt.Errorf("failed to insert record: %w", err)
 		}
@@ -66,7 +66,7 @@ func (i *ImportSetClient) InsertWithContext(ctx context.Context, tableName strin
 	for _, record := range records {
 		normalizedRecord := normalizeImportRecord(record)
 		var result core.Response
-		err := i.client.RawRequestWithContext(ctx, "POST", fmt.Sprintf("/import/%s", tableName), normalizedRecord, nil, &result)
+		err := i.insertRecordWithVersionFallback(ctx, tableName, normalizedRecord, &result)
 		if err != nil {
 			return nil, fmt.Errorf("failed to insert record: %w", err)
 		}
@@ -168,6 +168,42 @@ func (i *ImportSetClient) GetTransformResultsWithContext(ctx context.Context, im
 
 func buildImportSetLookupPath(importSetSysID string) string {
 	return fmt.Sprintf("/table/sys_import_set/%s", url.PathEscape(importSetSysID))
+}
+
+func buildImportInsertPath(tableName string) string {
+	return fmt.Sprintf("/import/%s", url.PathEscape(strings.TrimSpace(tableName)))
+}
+
+func buildImportInsertV1Path(tableName string) string {
+	return fmt.Sprintf("/v1/import/%s", url.PathEscape(strings.TrimSpace(tableName)))
+}
+
+func (i *ImportSetClient) insertRecordWithVersionFallback(
+	ctx context.Context,
+	tableName string,
+	record map[string]string,
+	result interface{},
+) error {
+	path := buildImportInsertPath(tableName)
+	err := i.client.RawRequestWithContext(ctx, "POST", path, record, nil, result)
+	if !shouldRetryWithV1ImportPath(err) {
+		return err
+	}
+
+	return i.client.RawRequestWithContext(ctx, "POST", buildImportInsertV1Path(tableName), record, nil, result)
+}
+
+func shouldRetryWithV1ImportPath(err error) bool {
+	if err == nil {
+		return false
+	}
+
+	snErr, ok := core.IsServiceNowError(err)
+	if !ok {
+		return false
+	}
+
+	return snErr.StatusCode == 404 || snErr.StatusCode == 405
 }
 
 func sanitizeEncodedQueryValue(value string) string {

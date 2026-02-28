@@ -1,6 +1,9 @@
 package identity
 
-import "strings"
+import (
+	"net/url"
+	"strings"
+)
 
 func buildEncodedOrderClause(orderBy string) string {
 	order := strings.TrimSpace(orderBy)
@@ -36,4 +39,8 @@ func sanitizeEncodedQueryValue(value string) string {
 	cleaned = strings.ReplaceAll(cleaned, "\n", " ")
 	cleaned = strings.ReplaceAll(cleaned, "\r", " ")
 	return cleaned
+}
+
+func escapeIdentityPathSegment(value string) string {
+	return url.PathEscape(strings.TrimSpace(value))
 }

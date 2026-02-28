@@ -4,6 +4,7 @@ import (
 	"context"
 	"fmt"
 	"io"
+	"net/url"
 	"path/filepath"
 	"strings"
 	"time"
@@ -227,7 +228,7 @@ func (a *AttachmentClient) Download(sysID, savePath string) error {
 
 // DownloadWithContext downloads an attachment to a file with context support
 func (a *AttachmentClient) DownloadWithContext(ctx context.Context, sysID, savePath string) error {
-	return a.client.DownloadFileWithContext(ctx, fmt.Sprintf("/attachment/%s/file", sysID), nil, savePath)
+	return a.client.DownloadFileWithContext(ctx, fmt.Sprintf("/attachment/%s/file", url.PathEscape(strings.TrimSpace(sysID))), nil, savePath)
 }
 
 // Delete removes an attachment
@@ -237,5 +238,5 @@ func (a *AttachmentClient) Delete(sysID string) error {
 
 // DeleteWithContext removes an attachment with context support
 func (a *AttachmentClient) DeleteWithContext(ctx context.Context, sysID string) error {
-	return a.client.RawRequestWithContext(ctx, "DELETE", fmt.Sprintf("/attachment/%s", sysID), nil, nil, nil)
+	return a.client.RawRequestWithContext(ctx, "DELETE", fmt.Sprintf("/attachment/%s", url.PathEscape(strings.TrimSpace(sysID))), nil, nil, nil)
 }

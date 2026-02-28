@@ -3,6 +3,7 @@ package cmdb
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strings"
 	"time"
 
@@ -12,6 +13,18 @@ import (
 // CMDBClient provides methods for managing Configuration Items and CMDB operations
 type CMDBClient struct {
 	client *core.Client
+}
+
+func buildCMDBTablePath(tableName string) string {
+	return fmt.Sprintf("/table/%s", url.PathEscape(strings.TrimSpace(tableName)))
+}
+
+func buildCMDBRecordPath(tableName, sysID string) string {
+	return fmt.Sprintf(
+		"/table/%s/%s",
+		url.PathEscape(strings.TrimSpace(tableName)),
+		url.PathEscape(strings.TrimSpace(sysID)),
+	)
 }
 
 // ConfigurationItem represents a Configuration Item in ServiceNow
@@ -227,7 +240,7 @@ func (c *CMDBClient) GetCIWithContext(ctx context.Context, sysID string) (*Confi
 	lookupParams := map[string]string{
 		"sysparm_fields": "sys_id,sys_class_name",
 	}
-	err := c.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/cmdb_ci/%s", sysID), nil, lookupParams, &lookup)
+	err := c.client.RawRequestWithContext(ctx, "GET", buildCMDBRecordPath("cmdb_ci", sysID), nil, lookupParams, &lookup)
 	if err != nil {
 		return nil, fmt.Errorf("failed to resolve CI class: %w", err)
 	}
@@ -279,7 +292,7 @@ func (c *CMDBClient) GetCIByClass(className, sysID string) (*ConfigurationItem, 
 // GetCIByClassWithContext retrieves a Configuration Item by class and sys_id with context support
 func (c *CMDBClient) GetCIByClassWithContext(ctx context.Context, className, sysID string) (*ConfigurationItem, error) {
 	var result core.Response
-	err := c.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/%s/%s", className, sysID), nil, nil, &result)
+	err := c.client.RawRequestWithContext(ctx, "GET", buildCMDBRecordPath(className, sysID), nil, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get CI by class: %w", err)
 	}
@@ -307,7 +320,7 @@ func (c *CMDBClient) ListCIsWithContext(ctx context.Context, filter *CIFilter) (
 	}
 
 	var result core.Response
-	err := c.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/%s", tableName), nil, params, &result)
+	err := c.client.RawRequestWithContext(ctx, "GET", buildCMDBTablePath(tableName), nil, params, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list CIs: %w", err)
 	}
@@ -337,7 +350,7 @@ func (c *CMDBClient) CreateCI(className string, ciData map[string]interface{}) (
 // CreateCIWithContext creates a new Configuration Item with context support
 func (c *CMDBClient) CreateCIWithContext(ctx context.Context, className string, ciData map[string]interface{}) (*ConfigurationItem, error) {
 	var result core.Response
-	err := c.client.RawRequestWithContext(ctx, "POST", fmt.Sprintf("/table/%s", className), ciData, nil, &result)
+	err := c.client.RawRequestWithContext(ctx, "POST", buildCMDBTablePath(className), ciData, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create CI: %w", err)
 	}
@@ -358,7 +371,7 @@ func (c *CMDBClient) UpdateCI(className, sysID string, updates map[string]interf
 // UpdateCIWithContext updates an existing Configuration Item with context support
 func (c *CMDBClient) UpdateCIWithContext(ctx context.Context, className, sysID string, updates map[string]interface{}) (*ConfigurationItem, error) {
 	var result core.Response
-	err := c.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/table/%s/%s", className, sysID), updates, nil, &result)
+	err := c.client.RawRequestWithContext(ctx, "PUT", buildCMDBRecordPath(className, sysID), updates, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update CI: %w", err)
 	}
@@ -378,7 +391,7 @@ func (c *CMDBClient) DeleteCI(className, sysID string) error {
 
 // DeleteCIWithContext removes a Configuration Item with context support
 func (c *CMDBClient) DeleteCIWithContext(ctx context.Context, className, sysID string) error {
-	err := c.client.RawRequestWithContext(ctx, "DELETE", fmt.Sprintf("/table/%s/%s", className, sysID), nil, nil, nil)
+	err := c.client.RawRequestWithContext(ctx, "DELETE", buildCMDBRecordPath(className, sysID), nil, nil, nil)
 	if err != nil {
 		return fmt.Errorf("failed to delete CI: %w", err)
 	}

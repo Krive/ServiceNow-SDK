@@ -3,7 +3,9 @@ package catalog
 import (
 	"context"
 	"fmt"
+	"net/url"
 	"strconv"
+	"strings"
 
 	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/core"
 )
@@ -68,7 +70,7 @@ func (cc *CatalogClient) AddToCartWithContext(ctx context.Context, itemSysID str
 
 	// Use ServiceNow's Service Catalog API to add to cart
 	var response map[string]interface{}
-	err := cc.client.RawRootRequestWithContext(
+	err := cc.rawServiceCatalogRequestWithContext(
 		ctx,
 		"POST",
 		buildAddToCartPath(itemSysID),
@@ -109,7 +111,7 @@ func (cc *CatalogClient) GetCart() (*Cart, error) {
 // GetCartWithContext returns the current cart contents with context support
 func (cc *CatalogClient) GetCartWithContext(ctx context.Context) (*Cart, error) {
 	var response map[string]interface{}
-	err := cc.client.RawRootRequestWithContext(
+	err := cc.rawServiceCatalogRequestWithContext(
 		ctx,
 		"GET",
 		buildCartPath(),
@@ -175,7 +177,7 @@ func (cc *CatalogClient) UpdateCartItemWithContext(ctx context.Context, cartItem
 	}
 
 	var response map[string]interface{}
-	err := cc.client.RawRootRequestWithContext(
+	err := cc.rawServiceCatalogRequestWithContext(
 		ctx,
 		"PUT",
 		buildCartItemPath(cartItemSysID),
@@ -203,7 +205,7 @@ func (cc *CatalogClient) RemoveFromCart(cartItemSysID string) error {
 // RemoveFromCartWithContext removes an item from the cart with context support
 func (cc *CatalogClient) RemoveFromCartWithContext(ctx context.Context, cartItemSysID string) error {
 	var response map[string]interface{}
-	err := cc.client.RawRootRequestWithContext(
+	err := cc.rawServiceCatalogRequestWithContext(
 		ctx,
 		"DELETE",
 		buildCartItemPath(cartItemSysID),
@@ -239,7 +241,7 @@ func (cc *CatalogClient) ClearCartWithContext(ctx context.Context) error {
 	}
 
 	var response map[string]interface{}
-	err = cc.client.RawRootRequestWithContext(
+	err = cc.rawServiceCatalogRequestWithContext(
 		ctx,
 		"DELETE",
 		buildClearCartPath(cart.CartID),
@@ -267,7 +269,7 @@ func (cc *CatalogClient) SubmitCart() (*OrderResult, error) {
 // SubmitCartWithContext submits the cart with context support
 func (cc *CatalogClient) SubmitCartWithContext(ctx context.Context) (*OrderResult, error) {
 	var response map[string]interface{}
-	err := cc.client.RawRootRequestWithContext(
+	err := cc.rawServiceCatalogRequestWithContext(
 		ctx,
 		"POST",
 		buildSubmitOrderPath(),
@@ -336,7 +338,7 @@ func (cc *CatalogClient) OrderNowWithContext(ctx context.Context, itemSysID stri
 
 	// Use ServiceNow's Service Catalog API to order directly
 	var response map[string]interface{}
-	err := cc.client.RawRootRequestWithContext(
+	err := cc.rawServiceCatalogRequestWithContext(
 		ctx,
 		"POST",
 		buildOrderNowPath(itemSysID),
@@ -425,10 +427,13 @@ type PriceEstimate struct {
 	EstimatedDate  string                 `json:"estimated_date,omitempty"`
 }
 
-const serviceCatalogAPIBasePath = "/api/sn_sc/servicecatalog"
+const (
+	serviceCatalogAPIBasePath   = "/api/sn_sc/servicecatalog"
+	serviceCatalogAPIV1BasePath = "/api/sn_sc/v1/servicecatalog"
+)
 
 func buildAddToCartPath(itemSysID string) string {
-	return fmt.Sprintf("%s/items/%s/add_to_cart", serviceCatalogAPIBasePath, itemSysID)
+	return fmt.Sprintf("%s/items/%s/add_to_cart", serviceCatalogAPIBasePath, url.PathEscape(strings.TrimSpace(itemSysID)))
 }
 
 func buildCartPath() string {
@@ -436,11 +441,11 @@ func buildCartPath() string {
 }
 
 func buildCartItemPath(cartItemSysID string) string {
-	return fmt.Sprintf("%s/cart/%s", serviceCatalogAPIBasePath, cartItemSysID)
+	return fmt.Sprintf("%s/cart/%s", serviceCatalogAPIBasePath, url.PathEscape(strings.TrimSpace(cartItemSysID)))
 }
 
 func buildClearCartPath(cartID string) string {
-	return fmt.Sprintf("%s/cart/%s/empty", serviceCatalogAPIBasePath, cartID)
+	return fmt.Sprintf("%s/cart/%s/empty", serviceCatalogAPIBasePath, url.PathEscape(strings.TrimSpace(cartID)))
 }
 
 func buildSubmitOrderPath() string {
@@ -448,7 +453,41 @@ func buildSubmitOrderPath() string {
 }
 
 func buildOrderNowPath(itemSysID string) string {
-	return fmt.Sprintf("%s/items/%s/order_now", serviceCatalogAPIBasePath, itemSysID)
+	return fmt.Sprintf("%s/items/%s/order_now", serviceCatalogAPIBasePath, url.PathEscape(strings.TrimSpace(itemSysID)))
+}
+
+func (cc *CatalogClient) rawServiceCatalogRequestWithContext(
+	ctx context.Context,
+	method, path string,
+	body interface{},
+	params map[string]string,
+	result interface{},
+	format string,
+) error {
+	err := cc.client.RawRootRequestWithContext(ctx, method, path, body, params, result, format)
+	if !shouldRetryWithVersionedServiceCatalogPath(path, err) {
+		return err
+	}
+
+	versionedPath := toVersionedServiceCatalogPath(path)
+	return cc.client.RawRootRequestWithContext(ctx, method, versionedPath, body, params, result, format)
+}
+
+func shouldRetryWithVersionedServiceCatalogPath(path string, err error) bool {
+	if err == nil || !strings.HasPrefix(path, serviceCatalogAPIBasePath) {
+		return false
+	}
+
+	snErr, ok := core.IsServiceNowError(err)
+	if !ok {
+		return false
+	}
+
+	return snErr.StatusCode == 404 || snErr.StatusCode == 405
+}
+
+func toVersionedServiceCatalogPath(path string) string {
+	return strings.Replace(path, serviceCatalogAPIBasePath, serviceCatalogAPIV1BasePath, 1)
 }
 
 func extractCartID(result map[string]interface{}) string {

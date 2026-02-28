@@ -223,6 +223,7 @@ type AccessCheckRequest struct {
 // AccessCheckResult contains the result of an access control check
 type AccessCheckResult struct {
 	HasAccess     bool     `json:"has_access"`
+	Authoritative bool     `json:"authoritative"`
 	Reason        string   `json:"reason,omitempty"`
 	RequiredRoles []string `json:"required_roles,omitempty"`
 	GrantedBy     string   `json:"granted_by,omitempty"`
@@ -241,7 +242,7 @@ func (i *IdentityClient) GetUser(sysID string) (*User, error) {
 // GetUserWithContext retrieves a user by sys_id with context support
 func (i *IdentityClient) GetUserWithContext(ctx context.Context, sysID string) (*User, error) {
 	var result core.Response
-	err := i.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/sys_user/%s", sysID), nil, nil, &result)
+	err := i.client.RawRequestWithContext(ctx, "GET", fmt.Sprintf("/table/sys_user/%s", escapeIdentityPathSegment(sysID)), nil, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get user: %w", err)
 	}
@@ -350,7 +351,7 @@ func (i *IdentityClient) UpdateUser(sysID string, updates map[string]interface{}
 // UpdateUserWithContext updates an existing user with context support
 func (i *IdentityClient) UpdateUserWithContext(ctx context.Context, sysID string, updates map[string]interface{}) (*User, error) {
 	var result core.Response
-	err := i.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/table/sys_user/%s", sysID), updates, nil, &result)
+	err := i.client.RawRequestWithContext(ctx, "PUT", fmt.Sprintf("/table/sys_user/%s", escapeIdentityPathSegment(sysID)), updates, nil, &result)
 	if err != nil {
 		return nil, fmt.Errorf("failed to update user: %w", err)
 	}
@@ -372,7 +373,7 @@ func (i *IdentityClient) DeleteUser(sysID string) error {
 func (i *IdentityClient) DeleteUserWithContext(ctx context.Context, sysID string) error {
 	// In ServiceNow, we typically deactivate users rather than delete them
 	updates := map[string]interface{}{
-		"active": "false",
+		"active": false,
 	}
 
 	_, err := i.UpdateUserWithContext(ctx, sysID, updates)
