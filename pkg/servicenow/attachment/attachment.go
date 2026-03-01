@@ -9,7 +9,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/core"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow/core"
 )
 
 // AttachmentClient provides methods for managing file attachments in ServiceNow

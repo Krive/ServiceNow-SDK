@@ -7,8 +7,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/core"
-	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/query"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow/core"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow/query"
 )
 
 type TableClient struct {

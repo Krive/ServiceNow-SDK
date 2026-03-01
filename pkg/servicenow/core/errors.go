@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"net/http"
 
-	"github.com/Krive/ServiceNow-SDK/pkg/types"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/types"
 )
 
 // Re-export error types for backward compatibility

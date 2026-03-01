@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/core"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow/core"
 )
 
 // CartItem represents an item in the shopping cart

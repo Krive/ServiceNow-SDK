@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Krive/ServiceNow-SDK/pkg/types"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/types"
 )
 
 type wrappedRetryableError struct{}

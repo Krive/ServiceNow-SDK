@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/core"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow/core"
 )
 
 // IdentityClient provides methods for managing users, roles, and groups in ServiceNow

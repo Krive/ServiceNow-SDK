@@ -1,4 +1,4 @@
-module github.com/Krive/ServiceNow-SDK
+module codeberg.org/Krive/ServiceNow-SDK
 
 go 1.25.0
 

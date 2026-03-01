@@ -2,6 +2,9 @@
 
 Go SDK for interacting with ServiceNow APIs with a clean client interface, fluent querying, and built-in reliability controls (timeouts, retries, and endpoint-aware rate limiting).
 
+Canonical repository: `https://codeberg.org/Krive/ServiceNow-SDK`
+Read-only mirror: `https://github.com/Krive/ServiceNow-SDK`
+
 ## Highlights
 
 - Multiple auth modes:
@@ -34,7 +37,7 @@ Go SDK for interacting with ServiceNow APIs with a clean client interface, fluen
 ## Installation
 
 ```bash
-go get github.com/Krive/ServiceNow-SDK@latest
+go get codeberg.org/Krive/ServiceNow-SDK@latest
 ```
 
 ## Quick Start
@@ -47,7 +50,7 @@ import (
 	"log"
 	"time"
 
-	sn "github.com/Krive/ServiceNow-SDK/pkg/servicenow"
+	sn "codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow"
 )
 
 func main() {
@@ -117,8 +120,8 @@ For environments where tokens must not be persisted to disk, use in-memory stora
 
 ```go
 import (
-	sn "github.com/Krive/ServiceNow-SDK/pkg/servicenow"
-	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/core"
+	sn "codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow/core"
 )
 
 tokenStore := core.NewMemoryTokenStorage()
@@ -135,8 +138,8 @@ To encrypt tokens at rest, provide encrypted file storage:
 
 ```go
 import (
-	sn "github.com/Krive/ServiceNow-SDK/pkg/servicenow"
-	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/core"
+	sn "codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow/core"
 )
 
 // 32-byte key from a secure secret manager.
@@ -260,7 +263,7 @@ Or configure manually via:
 ## Error Handling
 
 ```go
-import "github.com/Krive/ServiceNow-SDK/pkg/servicenow/core"
+import "codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow/core"
 
 if err != nil {
 	if snErr, ok := core.IsServiceNowError(err); ok {

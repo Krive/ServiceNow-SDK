@@ -9,7 +9,7 @@ import (
 	"testing"
 	"time"
 
-	sn "github.com/Krive/ServiceNow-SDK/pkg/servicenow"
+	sn "codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow"
 )
 
 type integrationConfig struct {

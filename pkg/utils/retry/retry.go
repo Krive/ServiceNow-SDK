@@ -8,7 +8,7 @@ import (
 	"math/rand"
 	"time"
 
-	"github.com/Krive/ServiceNow-SDK/pkg/types"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/types"
 )
 
 // Config holds retry configuration

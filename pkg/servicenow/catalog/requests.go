@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/core"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow/core"
 )
 
 // OrderResult represents the result of submitting an order

@@ -3,7 +3,7 @@ package importset
 import (
 	"testing"
 
-	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/core"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow/core"
 )
 
 func TestNormalizeImportRecord(t *testing.T) {

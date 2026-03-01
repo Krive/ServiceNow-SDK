@@ -4,17 +4,17 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/aggregate"
-	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/attachment"
-	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/batch"
-	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/catalog"
-	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/cmdb"
-	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/core"
-	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/identity"
-	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/importset"
-	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/table"
-	"github.com/Krive/ServiceNow-SDK/pkg/utils/ratelimit"
-	"github.com/Krive/ServiceNow-SDK/pkg/utils/retry"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow/aggregate"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow/attachment"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow/batch"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow/catalog"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow/cmdb"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow/core"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow/identity"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow/importset"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow/table"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/utils/ratelimit"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/utils/retry"
 )
 
 // Client represents the main ServiceNow SDK client

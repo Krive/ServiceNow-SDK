@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/core"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow/core"
 )
 
 // ClassClient handles CI class operations

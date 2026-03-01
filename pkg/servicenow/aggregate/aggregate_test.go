@@ -3,7 +3,7 @@ package aggregate
 import (
 	"testing"
 
-	"github.com/Krive/ServiceNow-SDK/pkg/servicenow/query"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/servicenow/query"
 )
 
 func TestBuildParamsUsesDocumentedOrderAndCountParams(t *testing.T) {

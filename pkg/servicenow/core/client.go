@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Krive/ServiceNow-SDK/pkg/utils/ratelimit"
-	"github.com/Krive/ServiceNow-SDK/pkg/utils/retry"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/utils/ratelimit"
+	"codeberg.org/Krive/ServiceNow-SDK/pkg/utils/retry"
 	"github.com/go-resty/resty/v2"
 )
 
